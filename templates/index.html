@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visitor Check-In</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='register.css') }}">
+</head>
+<body>
+
+    <header>
+        <h1 class="title">Visitor Check-In</h1>
+    </header>
+
+    <main class="container">
+        <section class="checkin-section">
+            <form id="checkin-form">
+                
+                <!-- Personal Information -->
+                <fieldset class="input-group">
+                    <legend>Personal Information</legend>
+                    
+                    <div class="form-row">
+                        <label for="username">Full Name</label>
+                        <input type="text" id="username" name="username" placeholder="Enter your full name" required>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="id">ID Number</label>
+                        <input type="text" id="id" name="id" placeholder="Enter your ID number" required>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="phone">Phone Number</label>
+                        <input type="tel" id="phone" name="phone" placeholder="Enter your phone number" required>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="purpose">Purpose of Visit</label>
+                        <textarea id="purpose" name="purpose" placeholder="Enter reason for visit" required></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="host">Host</label>
+                        <select id="host" name="host" required>
+                            <option value="" disabled selected>Select your host</option>
+                            <option value="Mr. Smith">Mr. Smith</option>
+                            <option value="Ms. Johnson">Ms. Johnson</option>
+                            <option value="Dr. Brown">Dr. Brown</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </fieldset>
+
+                <!-- Vehicle Information -->
+                <fieldset class="vehicle-section">
+                    <legend>Vehicle Information</legend>
+                    <label class="vehicle-label">
+                        <input type="checkbox" id="vehicle-checkbox"> I have a vehicle
+                    </label>
+                    <div id="vehicle-input" class="hidden">
+                        <label for="vehicle-plate">Vehicle Plate Number</label>
+                        <input type="text" id="vehicle-plate" name="vehicle-plate" placeholder="Enter plate number">
+                    </div>
+                </fieldset>
+
+                <!-- Pre-Registration -->
+                <fieldset class="prereg-section">
+                    <legend>Pre-Registration</legend>
+                    <label class="prereg-label">
+                        <input type="checkbox" id="prereg-checkbox"> I have pre-registered
+                    </label>
+                    <div id="prereg-inputs" class="hidden">
+                        <label for="prereg-code">Pre-Registration Code</label>
+                        <input type="text" id="prereg-code" name="prereg-code" placeholder="Enter pre-registration code">
+                        <button type="button" id="prereg-submit" class="btn">Submit Pre-Registration</button>
+                    </div>
+                </fieldset>
+
+                <!-- Camera Section -->
+                <fieldset class="camera-section">
+                    <legend>Take a Photo</legend>
+                    <div id="camera-container">
+                        <video id="video" autoplay></video>
+                        <button type="button" id="capture-btn" class="btn">📸 Capture Photo</button>
+                    </div>
+                </fieldset>
+
+                <!-- Captured Photo -->
+                <fieldset id="photo-container" class="hidden">
+                    <legend>Captured Photo</legend>
+                    <canvas id="canvas"></canvas>
+                    <img id="captured-photo" alt="Captured photo will appear here">
+                </fieldset>
+
+                <!-- Submit Button -->
+                <button type="submit" id="checkin-btn" class="btn disabled" disabled>✅ CHECK IN</button>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Visitor Management System. All Rights Reserved.</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='register.js') }}"></script>
+
+</body>
+</html>
