@@ -6,6 +6,7 @@
     <title>Visitor Check-In</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='register.css') }}">
 </head>
+
 <!-- ✅ Thank You Modal -->
 <div id="thankYouModal" class="modal hidden">
     <div class="modal-content">
@@ -14,8 +15,8 @@
         <button id="closeModal">OK</button>
     </div>
 </div>
-<body>
 
+<body>
     <header>
         <h1 class="title">Visitor Check-In</h1>
     </header>
@@ -35,7 +36,7 @@
 
                     <div class="form-row">
                         <label for="id">ID Number</label>
-                        <input type="text" id="id" name="id" placeholder="Enter your ID number" required>
+                        <input type="text" id="id" name="id" placeholder="Enter your ID number" pattern="\d{1,9}" maxlength="9" required title="ID must be up to 9 digits">
                     </div>
 
                     <div class="form-row">
