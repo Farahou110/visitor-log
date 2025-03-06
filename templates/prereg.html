@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pre-Registration Lookup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            margin: 0;
+            padding: 50px;
+        }
+        .container {
+            background: white;
+            max-width: 400px;
+            margin: auto;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 15px;
+            text-align: left;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            background-color: #007BFF;
+            color: white;
+            font-size: 18px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .info-container {
+            margin-top: 20px;
+            padding: 20px;
+            background: #e9ecef;
+            border-radius: 5px;
+            text-align: left;
+            display: none; /* Hidden initially */
+        }
+        .info-container p {
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        .error {
+            color: red;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Pre-Registration Lookup</h1>
+        
+        <label for="prereg-name">Enter Your Name:</label>
+        <input type="text" id="prereg-name" placeholder="Enter your name..." required>
+        
+        <button class="btn" id="fetch-btn">Fetch Details</button>
+
+        <div id="error-message" class="error"></div>
+
+        <div class="info-container" id="visitor-info">
+            <h3>Visitor Information</h3>
+            <p><strong>Name:</strong> <span id="visitor-name"></span></p>
+            <p><strong>Email:</strong> <span id="visitor-email"></span></p>
+            <p><strong>Phone:</strong> <span id="visitor-phone"></span></p>
+            <p><strong>Host:</strong> <span id="visitor-host"></span></p>
+            <p><strong>Purpose:</strong> <span id="visitor-purpose"></span></p>
+            <p><strong>Status:</strong> <span id="visitor-status"></span></p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("fetch-btn").addEventListener("click", function () {
+            const preregName = document.getElementById("prereg-name").value.trim();
+            const errorMessage = document.getElementById("error-message");
+            const visitorInfo = document.getElementById("visitor-info");
+
+            if (!preregName) {
+                errorMessage.textContent = " Please enter a valid name.";
+                visitorInfo.style.display = "none";
+                return;
+            }
+
+            fetch(`/get-visitor-info?name=${encodeURIComponent(preregName)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        document.getElementById("visitor-name").textContent = data.visitor.name;
+                        document.getElementById("visitor-email").textContent = data.visitor.email;
+                        document.getElementById("visitor-phone").textContent = data.visitor.phone;
+                        document.getElementById("visitor-host").textContent = data.visitor.host;
+                        document.getElementById("visitor-purpose").textContent = data.visitor.purpose;
+                        document.getElementById("visitor-status").textContent = data.visitor.status;
+
+                        visitorInfo.style.display = "block";
+                        errorMessage.textContent = "";
+                    } else {
+                        errorMessage.textContent = " No visitor found with this name.";
+                        visitorInfo.style.display = "none";
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching visitor info:", error);
+                    errorMessage.textContent = " Error fetching visitor details. Try again.";
+                    visitorInfo.style.display = "none";
+                });
+        });
+    </script>
+
+</body>
+</html>

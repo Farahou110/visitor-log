@@ -1,10 +1,11 @@
 document.addEventListener("DOMContentLoaded", function () {
+    //  Form & Input Elements
     const vehicleCheckbox = document.getElementById("vehicle-checkbox");
     const vehicleInput = document.getElementById("vehicle-input");
 
-    const preregCheckbox = document.getElementById("prereg-checkbox");
-    const preregInputs = document.getElementById("prereg-inputs");
-    const preregCodeInput = document.getElementById("prereg-code");
+    // const preregCheckbox = document.getElementById("prereg-checkbox");
+    // const preregInputs = document.getElementById("prereg-inputs");
+    // const preregCodeInput = document.getElementById("prereg-code");
 
     const checkinForm = document.getElementById("checkin-form");
     const checkinButton = document.getElementById("checkin-btn");
@@ -18,146 +19,173 @@ document.addEventListener("DOMContentLoaded", function () {
     const thankYouModal = document.getElementById("thankYouModal");
     const closeModal = document.getElementById("closeModal");
 
-    // Form Fields
+    //  Form Fields
+    const usernameInput = document.getElementById("username");
+    const phoneInput = document.getElementById("phone");
     const idInput = document.getElementById("id");
     const emailInput = document.getElementById("email");
     const purposeInput = document.getElementById("purpose");
     const hostInput = document.getElementById("host");
-    const hostPhoneInput = document.getElementById("host-phone");  // New field for host phone
+    // const vehicleCheckbox = document.getElementById("vehicle-checkbox");
+    const vehiclePlateInput = document.getElementById("vehicle-plate");
+    // const hostPhoneInput = document.getElementById("host-phone");
+    // const hostPhoneError = document.getElementById("host-phone-error");
 
-    // 🔹 Toggle vehicle input field
-    vehicleCheckbox.addEventListener("change", function () {
+    //  Toggle vehicle input field
+    vehicleCheckbox.addEventListener("change", () => {
         vehicleInput.classList.toggle("hidden", !vehicleCheckbox.checked);
     });
 
-    // 🔹 Toggle pre-registration input fields
-    preregCheckbox.addEventListener("change", function () {
-        if (preregCheckbox.checked) {
-            preregInputs.classList.remove("hidden");
+    // //  Toggle pre-registration input fields
+    // if (preregCheckbox) {
+    //     preregCheckbox.addEventListener("change", () => {
+    //         preregInputs.classList.toggle("hidden", !preregCheckbox.checked);
+    //         toggleFormFields(!preregCheckbox.checked);
+    //     });
+    // }
 
-            // Disable all other fields except photo and pre-registration code
-            document.querySelectorAll("#checkin-form input, #checkin-form select, #checkin-form textarea").forEach(input => {
-                if (input.id !== "prereg-code") input.disabled = true;
+    function toggleFormFields(enable) {
+        document.querySelectorAll("#checkin-form input, #checkin-form select, #checkin-form textarea")
+            .forEach(input => {
+                if (input.id !== "prereg-code") input.disabled = !enable;
             });
-        } else {
-            preregInputs.classList.add("hidden");
-
-            // Re-enable all fields
-            document.querySelectorAll("#checkin-form input, #checkin-form select, #checkin-form textarea").forEach(input => {
-                input.disabled = false;
-            });
-        }
-    });
-
-    // 🔹 ID Number Validation (Only digits, max 9)
-    idInput.addEventListener("input", function () {
-        this.value = this.value.replace(/\D/g, "").slice(0, 9);
-    });
-
-    // 🔹 Email Validation (Must contain '@')
-    emailInput.addEventListener("input", function () {
-        if (!this.value.includes("@")) {
-            this.setCustomValidity("Email must contain @");
-        } else {
-            this.setCustomValidity("");
-        }
-    });
-
-    // 🔹 Auto-fetch host phone number when host is selected
-    hostInput.addEventListener("change", function () {
-        const selectedHost = hostInput.value;
-
-        if (selectedHost) {
-            fetch(`/get-host-phone?host=${encodeURIComponent(selectedHost)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === "success") {
-                        hostPhoneInput.value = data.phone;
-                    } else {
-                        hostPhoneInput.value = "";
-                        alert("⚠️ Host phone number not found!");
-                    }
-                })
-                .catch(error => console.error("Error fetching host phone:", error));
-        } else {
-            hostPhoneInput.value = "";
-        }
-    });
-
-    // 🔹 Enable submit button only when form is valid
-    checkinForm.addEventListener("input", function () {
-        if (checkinForm.checkValidity() && validateFields()) {
-            checkinButton.classList.remove("disabled");
-            checkinButton.removeAttribute("disabled");
-        } else {
-            checkinButton.classList.add("disabled");
-            checkinButton.setAttribute("disabled", "true");
-        }
-    });
-
-    // 🔹 Extra Validation for Required Fields
-    function validateFields() {
-        return (
-            (preregCheckbox.checked || 
-            (idInput.value.trim().length > 0 &&
-            emailInput.value.includes("@") &&
-            purposeInput.value.trim().length > 0 &&
-            hostInput.value.trim().length > 0 &&
-            hostPhoneInput.value.trim().length > 0)) // Ensure host phone is present
-        );
     }
 
-    // 🔹 Handle Check-in Form Submission (Using JSON)
-    checkinForm.addEventListener("submit", function (event) {
+    // 🔹 ID Number Validation (Only digits, max length 9)
+    idInput.addEventListener("input", () => {
+        idInput.value = idInput.value.replace(/\D/g, "").slice(0, 9);
+    });
+
+    // 🔹 Email Validation
+    emailInput.addEventListener("input", () => {
+        emailInput.setCustomValidity(emailInput.value.includes("@") ? "" : "Email must contain @");
+    });
+
+    // // 🔹 Auto-fetch host phone number when host is selected
+    // hostInput.addEventListener("change", () => {
+    //     const selectedHost = hostInput.value.trim();
+
+    //     if (selectedHost) {
+    //         fetch(`/get-host-phone?host=${encodeURIComponent(selectedHost)}`)
+    //             .then(response => response.json())
+    //             .then(data => {
+    //                 if (data.status === "success") {
+    //                     hostPhoneInput.value = data.phone;
+    //                     hostPhoneError.classList.add("hidden");
+    //                 } else {
+    //                     hostPhoneInput.value = "";
+    //                     hostPhoneError.classList.remove("hidden");
+    //                     hostPhoneError.textContent = "Host phone number not found!";
+    //                 }
+    //             })
+    //             .catch(error => {
+    //                 console.error("Error fetching host phone:", error);
+    //                 hostPhoneError.classList.remove("hidden");
+    //                 hostPhoneError.textContent = "Error fetching host phone!";
+    //             });
+    //     } else {
+    //         hostPhoneInput.value = "";
+    //         hostPhoneError.classList.add("hidden");
+    //     }
+    // });
+
+    //  Enable check-in button when form is valid
+    checkinForm.addEventListener("input", validateForm);
+
+    function validateForm() {
+        const isValid =
+            usernameInput.value.trim() !== "" &&
+            idInput.value.trim() !== "" &&
+            emailInput.value.includes("@") &&
+            phoneInput.value.trim() !== "" &&
+            purposeInput.value.trim() !== "" &&
+            hostInput.value.trim() !== "";
+
+        checkinButton.disabled = !isValid;
+        checkinButton.classList.toggle("disabled", !isValid);
+    }
+
+     // Listen for input changes to enable button
+     document.querySelectorAll("#checkin-form input, #checkin-form select, #checkin-form textarea")
+     .forEach(input => input.addEventListener("input", validateForm));
+
+    // Handle Check-in Form Submission (JSON format)
+    checkinForm.addEventListener("submit", event => {
         event.preventDefault();
 
-        const formData = new FormData(checkinForm);
-        const jsonData = {};
+        const formData = {
+            username: usernameInput.value.trim(),
+            id: idInput.value.trim(),
+            email: emailInput.value.trim(),
+            phone: phoneInput.value.trim(),
+            purpose: purposeInput.value.trim(),
+            host: hostInput.value.trim(),
+            vehicle_plate: vehicleCheckbox.checked ? vehiclePlateInput.value.trim() : "None",
+            captured_photo: capturedPhoto.src || null // Send captured photo if available
+        };
 
-        formData.forEach((value, key) => {
-            jsonData[key] = value;
-        });
-
+        //SEND DATA TO SERVER
         fetch("/checkin", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(jsonData)
+            body: JSON.stringify(formData)
         })
         .then(response => response.json())
         .then(data => {
             if (data.status === "success") {
-                thankYouModal.classList.remove("hidden");
+                showThankYouModal();
                 checkinForm.reset();
+                checkinButton.disabled = true;
                 checkinButton.classList.add("disabled");
-                checkinButton.setAttribute("disabled", "true");
             } else {
-                alert("❌ Error: " + data.message);
+                alert("Error: " + data.message);
             }
         })
-        .catch(error => console.error("Error:", error));
+        .catch(error => {
+            console.error("Error:", error);
+            alert("An error occurred while checking in.");
+        });
     });
 
-    // 🔹 Close Thank You Modal
-    closeModal.addEventListener("click", function () {
+    function showThankYouModal() {
+        thankYouModal.classList.remove("hidden");
+    }
+
+    //  Close Thank You Modal
+    closeModal.addEventListener("click", () => {
         thankYouModal.classList.add("hidden");
     });
 
-    // 🔹 Camera functionality
+    //  Camera functionality (Capture Photo)
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ video: true }).then(function (stream) {
-            video.srcObject = stream;
-            video.play();
-        });
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                video.play();
+            })
+            .catch(error => console.error("Error accessing camera:", error));
     }
 
-    captureButton.addEventListener("click", function () {
+    captureButton.addEventListener("click", () => {
         const context = canvas.getContext("2d");
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        capturedPhoto.src = canvas.toDataURL("image/png");
+        const imageData = canvas.toDataURL("image/png");
+        capturedPhoto.src = imageData;
         capturedPhoto.classList.remove("hidden");
         photoContainer.classList.remove("hidden");
+
+        // Store image data in a hidden input field for submission
+        let imageInput = document.getElementById("photo-input");
+        if (!imageInput) {
+            imageInput = document.createElement("input");
+            imageInput.type = "hidden";
+            imageInput.name = "photo";
+            imageInput.id = "photo-input";
+            checkinForm.appendChild(imageInput);
+        }
+        imageInput.value = imageData;
     });
 });

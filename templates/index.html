@@ -7,16 +7,16 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='register.css') }}">
 </head>
 
-<!-- ✅ Thank You Modal -->
-<div id="thankYouModal" class="modal hidden">
-    <div class="modal-content">
-        <h2>✅ THANK YOU FOR CHECKING IN!</h2>
-        <p>Your check-in has been recorded successfully.</p>
-        <button id="closeModal">OK</button>
-    </div>
-</div>
-
 <body>
+    <!-- ✅ Thank You Modal -->
+    <div id="thankYouModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>THANK YOU FOR CHECKING IN!</h2>
+            <p id="thankYouMessage">Your check-in has been recorded successfully.</p>
+            <button id="closeModal">OK</button>
+        </div>
+    </div>
+
     <header>
         <h1 class="title">Visitor Check-In</h1>
     </header>
@@ -58,15 +58,21 @@
                         <label for="host">Host</label>
                         <select id="host" name="host" required>
                             <option value="" disabled selected>Select your host</option>
-                            <option value="Mr. Smith">Mr. Smith</option>
-                            <option value="Ms. Johnson">Ms. Johnson</option>
-                            <option value="Dr. Brown">Dr. Brown</option>
-                            <option value="Other">Other</option>
+                            <option value="Lobster">Mr. Lobster</option>
+                            <option value="Emmanuel">Mr. Emmanuel</option>
+                            <option value="Dennis">Mr. Dennis</option>
+                            <option value="Alex">Mr. Alex</option>
                         </select>
                     </div>
-                </fieldset>
 
-                <!-- Vehicle Information -->
+                    <!-- Host Phone Autofill
+                    <div class="form-row">
+                        <label for="host-phone">Host Phone</label>
+                        <input type="text" id="host-phone" name="host-phone" placeholder="Host phone number" readonly>
+                    </div>
+                </fieldset> -->
+
+                <!--  Vehicle Information -->
                 <fieldset class="vehicle-section">
                     <legend>Vehicle Information</legend>
                     <label class="vehicle-label">
@@ -78,37 +84,23 @@
                     </div>
                 </fieldset>
 
-                <!-- Pre-Registration -->
-                <fieldset class="prereg-section">
-                    <legend>Pre-Registration</legend>
-                    <label class="prereg-label">
-                        <input type="checkbox" id="prereg-checkbox"> I have pre-registered
-                    </label>
-                    <div id="prereg-inputs" class="hidden">
-                        <label for="prereg-code">Pre-Registration Code</label>
-                        <input type="text" id="prereg-code" name="prereg-code" placeholder="Enter pre-registration code">
-                        <button type="button" id="prereg-submit" class="btn">Submit Pre-Registration</button>
-                    </div>
-                </fieldset>
-
-                <!-- Camera Section -->
+                <!--  Camera Section -->
                 <fieldset class="camera-section">
                     <legend>Take a Photo</legend>
                     <div id="camera-container">
                         <video id="video" autoplay></video>
-                        <button type="button" id="capture-btn" class="btn">📸 Capture Photo</button>
+                        <button type="button" id="capture-btn" class="btn">Capture Photo</button>
                     </div>
                 </fieldset>
 
                 <!-- Captured Photo -->
                 <fieldset id="photo-container" class="hidden">
                     <legend>Captured Photo</legend>
-                    <canvas id="canvas"></canvas>
                     <img id="captured-photo" alt="Captured photo will appear here">
                 </fieldset>
 
-                <!-- Submit Button -->
-                <button type="submit" id="checkin-btn" class="btn disabled" disabled>✅ CHECK IN</button>
+                <!--  Submit Button -->
+                <button type="submit" id="checkin-btn" class="btn disabled" disabled>CHECK IN</button>
             </form>
         </section>
     </main>

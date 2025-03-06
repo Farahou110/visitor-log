@@ -59,6 +59,17 @@
         button:hover {
             background-color: #0056b3;
         }
+        .register-link {
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        .register-link a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .register-link a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -77,6 +88,10 @@
             
             <button type="submit">Login</button>
         </form>
+
+        <p class="register-link">
+            Don't have an account? <a href="{{ url_for('register_host') }}">Register here</a>
+        </p>
     </div>
 
 </body>
