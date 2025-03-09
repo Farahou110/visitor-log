@@ -61,33 +61,33 @@ document.addEventListener("DOMContentLoaded", function () {
         emailInput.setCustomValidity(emailInput.value.includes("@") ? "" : "Email must contain @");
     });
 
-    // // 🔹 Auto-fetch host phone number when host is selected
-    // hostInput.addEventListener("change", () => {
-    //     const selectedHost = hostInput.value.trim();
+    // 🔹 Auto-fetch host phone number when host is selected
+    hostInput.addEventListener("change", () => {
+        const selectedHost = hostInput.value.trim();
 
-    //     if (selectedHost) {
-    //         fetch(`/get-host-phone?host=${encodeURIComponent(selectedHost)}`)
-    //             .then(response => response.json())
-    //             .then(data => {
-    //                 if (data.status === "success") {
-    //                     hostPhoneInput.value = data.phone;
-    //                     hostPhoneError.classList.add("hidden");
-    //                 } else {
-    //                     hostPhoneInput.value = "";
-    //                     hostPhoneError.classList.remove("hidden");
-    //                     hostPhoneError.textContent = "Host phone number not found!";
-    //                 }
-    //             })
-    //             .catch(error => {
-    //                 console.error("Error fetching host phone:", error);
-    //                 hostPhoneError.classList.remove("hidden");
-    //                 hostPhoneError.textContent = "Error fetching host phone!";
-    //             });
-    //     } else {
-    //         hostPhoneInput.value = "";
-    //         hostPhoneError.classList.add("hidden");
-    //     }
-    // });
+        if (selectedHost) {
+            fetch(`/get-host-phone?host=${encodeURIComponent(selectedHost)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        hostPhoneInput.value = data.phone;
+                        hostPhoneError.classList.add("hidden");
+                    } else {
+                        hostPhoneInput.value = "";
+                        hostPhoneError.classList.remove("hidden");
+                        hostPhoneError.textContent = "Host phone number not found!";
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching host phone:", error);
+                    hostPhoneError.classList.remove("hidden");
+                    hostPhoneError.textContent = "Error fetching host phone!";
+                });
+        } else {
+            hostPhoneInput.value = "";
+            hostPhoneError.classList.add("hidden");
+        }
+    });
 
     //  Enable check-in button when form is valid
     checkinForm.addEventListener("input", validateForm);
@@ -123,6 +123,32 @@ document.addEventListener("DOMContentLoaded", function () {
             vehicle_plate: vehicleCheckbox.checked ? vehiclePlateInput.value.trim() : "None",
             captured_photo: capturedPhoto.src || null // Send captured photo if available
         };
+
+        fetch("/checkin", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                username: "John Doe",
+                phone: "+123456789",
+                host: "HostName",
+                purpose: "Meeting",
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                alert(data.message);  // Show success message
+                location.reload();     //  Refresh the page
+            } else {
+                alert("Error: " + data.message);
+            }
+        })
+        .catch(error => {
+            alert("An unexpected error occurred.");
+        });
+        
 
         //SEND DATA TO SERVER
         fetch("/checkin", {
@@ -189,3 +215,4 @@ document.addEventListener("DOMContentLoaded", function () {
         imageInput.value = imageData;
     });
 });
+

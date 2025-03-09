@@ -91,45 +91,90 @@
             <p><strong>Host:</strong> <span id="visitor-host"></span></p>
             <p><strong>Purpose:</strong> <span id="visitor-purpose"></span></p>
             <p><strong>Status:</strong> <span id="visitor-status"></span></p>
+
+            <!-- New: Check-in Section -->
+            <label for="checkin-code">Enter Check-In Code:</label>
+            <input type="text" id="checkin-code" placeholder="Enter your code..." required>
+
+            <button class="btn" id="checkin-btn">Check In</button>
+            <div id="checkin-message" class="error"></div>
         </div>
     </div>
 
     <script>
-        document.getElementById("fetch-btn").addEventListener("click", function () {
+       document.getElementById("fetch-btn").addEventListener("click", function () {
             const preregName = document.getElementById("prereg-name").value.trim();
             const errorMessage = document.getElementById("error-message");
             const visitorInfo = document.getElementById("visitor-info");
 
             if (!preregName) {
-                errorMessage.textContent = " Please enter a valid name.";
+                errorMessage.textContent = "Please enter a valid name.";
                 visitorInfo.style.display = "none";
                 return;
             }
 
-            fetch(`/get-visitor-info?name=${encodeURIComponent(preregName)}`)
+            fetch(`http://127.0.0.1:5001/check-visitor?username=${encodeURIComponent(preregName)}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === "success") {
-                        document.getElementById("visitor-name").textContent = data.visitor.name;
-                        document.getElementById("visitor-email").textContent = data.visitor.email;
-                        document.getElementById("visitor-phone").textContent = data.visitor.phone;
-                        document.getElementById("visitor-host").textContent = data.visitor.host;
-                        document.getElementById("visitor-purpose").textContent = data.visitor.purpose;
-                        document.getElementById("visitor-status").textContent = data.visitor.status;
+                        const visitor = data.visitor;
+                        document.getElementById("visitor-name").textContent = visitor.username || "N/A";
+                        document.getElementById("visitor-email").textContent = visitor.email || "N/A";
+                        document.getElementById("visitor-phone").textContent = visitor.phone || "N/A";
+                        document.getElementById("visitor-host").textContent = visitor.host || "N/A";
+                        document.getElementById("visitor-purpose").textContent = visitor.purpose || "N/A";
+                        document.getElementById("visitor-status").textContent = visitor.status || "N/A";
 
                         visitorInfo.style.display = "block";
                         errorMessage.textContent = "";
                     } else {
-                        errorMessage.textContent = " No visitor found with this name.";
+                        errorMessage.textContent = "No visitor found with this name.";
                         visitorInfo.style.display = "none";
                     }
                 })
                 .catch(error => {
                     console.error("Error fetching visitor info:", error);
-                    errorMessage.textContent = " Error fetching visitor details. Try again.";
+                    errorMessage.textContent = "Error fetching visitor details. Try again.";
                     visitorInfo.style.display = "none";
                 });
         });
+
+        document.getElementById("checkin-btn").addEventListener("click", function () {
+            const checkinCode = document.getElementById("checkin-code").value.trim();
+            const visitorName = document.getElementById("visitor-name").textContent;
+            const checkinMessage = document.getElementById("checkin-message");
+
+            if (!checkinCode) {
+                checkinMessage.textContent = "Please enter a valid check-in code.";
+                return;
+            }
+
+            const checkinData = {
+                username: visitorName,
+                checkin_code: checkinCode,
+                checkin_time: new Date().toISOString()
+            };
+
+            fetch("http://127.0.0.1:5001/checkin-visitor", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(checkinData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    checkinMessage.style.color = "green";
+                    checkinMessage.textContent = "Check-in successful!";
+                } else {
+                    checkinMessage.textContent = "Check-in failed. Try again.";
+                }
+            })
+            .catch(error => {
+                console.error("Error during check-in:", error);
+                checkinMessage.textContent = "Error processing check-in.";
+            });
+        });
+
     </script>
 
 </body>

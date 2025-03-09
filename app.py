@@ -3,8 +3,10 @@ import re
 from pymongo import MongoClient
 from flask_mail import Mail, Message
 from twilio.rest import Client
+from bson import ObjectId
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
+from datetime import datetime
 
 #  Flask App Initialization
 app = Flask(__name__)  
@@ -13,8 +15,9 @@ app.secret_key = "your_secret_key"
 #  MongoDB Connection
 client = MongoClient("mongodb://localhost:27017/")
 db = client["VISITORS"]
-visitors_collection = db["visitor"]  # Stores visitor check-ins
+visitor_collection = db["visitor"]  # Stores visitor check-ins
 hosts_collection = db["hosts"]  # Stores host login details
+pre_registered_collection = db["pre_registered"]  # Stores pre-registered visitors
 
 #  Flask-Mail Configuration
 app.config["MAIL_SERVER"] = "smtp.gmail.com"
@@ -51,20 +54,87 @@ def prereg():
 
 
 #get visitors details
-@app.route("/get-visitor-info", methods=["GET"])
-def get_visitor_info():
-    visitor_name = request.args.get("name")
+# @app.route("/get-visitor-info", methods=["GET"])
+# def get_visitor_info():
+#     visitor_name = request.args.get("name")
 
-    if not visitor_name:
-        return jsonify({"status": "error", "message": "Missing visitor name"}), 400
+#     if not visitor_name:
+#         return jsonify({"status": "error", "message": "Missing visitor name"}), 400
 
-    visitor = visitors_collection.find_one({"name": visitor_name}, {"_id": 0})
+#     visitor = visitor_collection.find_one({"name": visitor_name}, {"_id": 0})
 
-    if not visitor:
-        return jsonify({"status": "error", "message": "Visitor not found"}), 404
+#     if not visitor:
+#         return jsonify({"status": "error", "message": "Visitor not found"}), 404
 
-    return jsonify({"status": "success", "visitor": visitor})
+#     return jsonify({"status": "success", "visitor": visitor})
 
+
+# Route to fetch visitor details
+@app.route("/check-visitor", methods=["GET"])
+def check_visitor():
+    try:
+        username = request.args.get("username", "").strip()
+        
+        if not username:
+            return jsonify({"status": "error", "message": "Username is required"}), 400
+
+        # Fetch visitor details
+        visitor = visitor_collection.find_one(
+            {"username": {"$regex": f"^{username}$", "$options": "i"}}
+        )
+
+        if not visitor:
+            return jsonify({"status": "error", "message": "Visitor not found"}), 404
+
+        # Remove MongoDB ObjectId before returning
+        visitor["_id"] = str(visitor["_id"])
+
+        return jsonify({"status": "success", "visitor": visitor})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Server error: {str(e)}"}), 500
+
+# Route to check-in visitor and store in pre_registered collection
+@app.route("/checkin-visitor", methods=["POST"])
+def checkin_visitor():
+    try:
+        data = request.json
+        username = data.get("username", "").strip()
+        checkin_code = data.get("checkin_code", "").strip()
+
+        if not username or not checkin_code:
+            return jsonify({"status": "error", "message": "Username and check-in code are required"}), 400
+
+        # Fetch visitor details from `visitors` collection
+        visitor = visitor_collection.find_one(
+            {"username": {"$regex": f"^{username}$", "$options": "i"}}
+        )
+
+        if not visitor:
+            return jsonify({"status": "error", "message": "Visitor not found"}), 404
+
+        # Check if visitor already checked in
+        existing_checkin = pre_registered_collection.find_one({"username": username})
+        if existing_checkin:
+            return jsonify({"status": "error", "message": "Visitor already checked in"}), 400
+
+        # Store visitor details in `pre_registered` collection
+        checkin_data = {
+            "username": visitor["username"],
+            "email": visitor["email"],
+            "phone": visitor["phone"],
+            "host": visitor["host"],
+            "purpose": visitor["purpose"],
+            "status": "Checked In",
+            "checkin_code": checkin_code,
+            "checkin_time": datetime.utcnow().isoformat()
+        }
+        pre_registered_collection.insert_one(checkin_data)
+
+        return jsonify({"status": "success", "message": "Check-in successful!"})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Server error: {str(e)}"}), 500    
 
 
 # Visitor Index Page (Only for Visitors)
@@ -128,21 +198,13 @@ def login():
 
         host = hosts_collection.find_one({"username": username})
         
-        if host and check_password_hash(host["password"], password):  # ✅ Correct password check
+        if host and check_password_hash(host["password"], password):  #  Correct password check
             session["host"] = username  # Store in session
             return redirect(url_for("dashboard"))  # Redirect to dashboard
 
         return render_template("login.html", error="Invalid username or password")
 
     return render_template("login.html")
-
-
-#  Host Logout
-@app.route("/logout")
-def logout():
-    """Logs out the host and redirects to login page."""
-    session.pop("host", None)
-    return redirect(url_for("login"))
 
 
 # Host Dashboard (Restricted Access)
@@ -152,9 +214,23 @@ def dashboard():
     if "host" not in session:
         return redirect(url_for("login"))
 
-    visitors = list(visitors_collection.find({}, {"_id": 0}))  # Fetch all visitors
+    visitors = list(visitor_collection.find({}, {"_id": 0}))  # Fetch all visitors
     return render_template("dashboard.html", visitors=visitors)
 
+
+# @app.route("/get-host-phone", methods=["GET"])
+# def get_host_phone():
+#     host = request.args.get("host", "").strip()
+    
+#     if not host:
+#         return jsonify({"status": "error", "message": "Host name is required"}), 400
+
+#     host_data = visitor_collection.find_one({"host": {"$regex": host, "$options": "i"}})
+
+#     if host_data and "host_phone" in host_data:
+#         return jsonify({"status": "success", "phone": host_data["host_phone"]})
+#     else:
+#         return jsonify({"status": "error", "message": "Host phone not found"}), 404
 
 #  Handle Visitor Check-In & Notify Host
 @app.route("/checkin", methods=["POST"])
@@ -177,7 +253,7 @@ def checkin():
         # host_phone = host_data.get("phone")
 
         #  Save visitor details in MongoDB
-        visitor = visitors_collection.insert_one({
+        visitor = visitor_collection.insert_one({
             **data,
             "status": "Pending",
         })
@@ -196,6 +272,9 @@ def checkin():
         return jsonify({"status": "success", "message": "Check-in successful, host notified!"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+    
+
+
 
 
 #  Approve or Decline Visitors (Host Only)
@@ -208,11 +287,14 @@ def approve_visitor():
     visitor_id = data.get("id")
     status = data.get("status")  # "Approved" or "Declined"
 
-    # Update visitor status in MongoDB
-    visitors_collection.update_one({"_id": visitor_id}, {"$set": {"status": status}})
+    if not visitor_id or not status:
+        return jsonify({"status": "error", "message": "Missing visitor ID or status"}), 400
 
-    return jsonify({"status": "success", "message": f"Visitor {status} successfully"})
-
+    try:
+        visitor_collection.update_one({"_id": ObjectId(visitor_id)}, {"$set": {"status": status}})
+        return jsonify({"status": "success", "message": f"Visitor {status} successfully"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # Handle Host SMS Responses (YES/NO)
 @app.route("/sms-reply", methods=["POST"])
@@ -233,15 +315,15 @@ def sms_reply():
     #  Determine approval status
     if response_text == "yes":
         status = "Approved"
-        visitor_message = "✅ Your visit has been approved. Please proceed!"
+        visitor_message = " Your visit has been approved. Please proceed!"
     elif response_text == "no":
         status = "Declined"
-        visitor_message = "❌ Your visit request has been declined."
+        visitor_message = " Your visit request has been declined."
     else:
         return "Invalid response. Reply YES or NO.", 400
 
     #  Update visitor status in MongoDB
-    visitors_collection.update_one({"_id": visitor_id}, {"$set": {"status": status}})
+    visitor_collection.update_one({"_id": visitor_id}, {"$set": {"status": status}})
 
     # #  Notify visitor via SMS
     # twilio_client.messages.create(
@@ -262,8 +344,15 @@ def get_visitors():
     if "host" not in session:
         return jsonify({"status": "error", "message": "Unauthorized"}), 403
 
-    visitors = list(visitors_collection.find({}, {"_id": 0}))
+    visitors = list(visitor_collection.find({}, {"_id": 0}))
     return jsonify(visitors)
+
+#  Host Logout
+@app.route("/logout")
+def logout():
+    """Logs out the host and redirects to login page."""
+    session.pop("host", None)
+    return redirect(url_for("login"))
 
 
 #  Run Flask App
