@@ -2,11 +2,12 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 import re
 from pymongo import MongoClient
 from flask_mail import Mail, Message
-from twilio.rest import Client
 from bson import ObjectId
 from werkzeug.security import generate_password_hash, check_password_hash
-import os
 from datetime import datetime
+import random           
+import string
+
 
 #  Flask App Initialization
 app = Flask(__name__)  
@@ -18,24 +19,20 @@ db = client["VISITORS"]
 visitor_collection = db["visitor"]  # Stores visitor check-ins
 hosts_collection = db["hosts"]  # Stores host login details
 pre_registered_collection = db["pre_registered"]  # Stores pre-registered visitors
+approved_collection = db["approved"]  # Stores approved visitors    
+declined_collection = db["declined"]  # Stores declined visitors
+checkout_collection = db["checkout"]  # Stores checked-out visitors
 
-#  Flask-Mail Configuration
-app.config["MAIL_SERVER"] = "smtp.gmail.com"
+# Flask-Mail Configuration
+app.config["MAIL_SERVER"] = "smtp.gmail.com"  # Change for Outlook, Yahoo, etc.
 app.config["MAIL_PORT"] = 587
 app.config["MAIL_USE_TLS"] = True
-app.config["MAIL_USE_SSL"] = False
-app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")  
-app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")  
+app.config["MAIL_USERNAME"] = "visitormanagement687@gmail.com"  # Replace with your email
+app.config["MAIL_PASSWORD"] = "hnvc inum rfwe zbsb"  # Replace with your email password
+app.config["MAIL_DEFAULT_SENDER"] = "visitormanagement687@gmail.com"
+
 mail = Mail(app)
 
-# #  Twilio SMS Configuration
-# TWILIO_SID = os.getenv("TWILIO_SID")
-# TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
-# TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
-# twilio_client = Client(TWILIO_SID, TWILIO_AUTH_TOKEN)
-
-# Store pending approvals {host_phone: visitor_id}
-pending_approvals = {}
 
 # ----- ROUTES -----
 
@@ -53,40 +50,30 @@ def prereg():
     return render_template("prereg.html")
 
 
-#get visitors details
-# @app.route("/get-visitor-info", methods=["GET"])
-# def get_visitor_info():
-#     visitor_name = request.args.get("name")
-
-#     if not visitor_name:
-#         return jsonify({"status": "error", "message": "Missing visitor name"}), 400
-
-#     visitor = visitor_collection.find_one({"name": visitor_name}, {"_id": 0})
-
-#     if not visitor:
-#         return jsonify({"status": "error", "message": "Visitor not found"}), 404
-
-#     return jsonify({"status": "success", "visitor": visitor})
-
-
 # Route to fetch visitor details
+
 @app.route("/check-visitor", methods=["GET"])
 def check_visitor():
     try:
         username = request.args.get("username", "").strip()
-        
+
         if not username:
             return jsonify({"status": "error", "message": "Username is required"}), 400
 
+        # Debugging log: Print received username
+        print(f"Searching for username: {username}")
+
         # Fetch visitor details
         visitor = visitor_collection.find_one(
-            {"username": {"$regex": f"^{username}$", "$options": "i"}}
+            {"username": {"$regex": f"^{re.escape(username)}$", "$options": "i"}}
         )
+
+        # Debugging log: Print retrieved visitor
+        print("Visitor found:", visitor)
 
         if not visitor:
             return jsonify({"status": "error", "message": "Visitor not found"}), 404
 
-        # Remove MongoDB ObjectId before returning
         visitor["_id"] = str(visitor["_id"])
 
         return jsonify({"status": "success", "visitor": visitor})
@@ -94,31 +81,36 @@ def check_visitor():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Server error: {str(e)}"}), 500
 
-# Route to check-in visitor and store in pre_registered collection
+
+# Generate a unique 6-digit check-in code
+def generate_checkin_code(length=6):
+    return "".join(random.choices(string.ascii_uppercase + string.digits, k=length))
+
+# Route to check-in visitor
 @app.route("/checkin-visitor", methods=["POST"])
 def checkin_visitor():
     try:
         data = request.json
         username = data.get("username", "").strip()
-        checkin_code = data.get("checkin_code", "").strip()
+        checkin_date = data.get("checkin_date", "").strip()
 
-        if not username or not checkin_code:
-            return jsonify({"status": "error", "message": "Username and check-in code are required"}), 400
+        if not username or not checkin_date:
+            return jsonify({"status": "error", "message": "Username and check-in date are required"}), 400
 
-        # Fetch visitor details from `visitors` collection
-        visitor = visitor_collection.find_one(
-            {"username": {"$regex": f"^{username}$", "$options": "i"}}
-        )
+        try:
+            checkin_date = datetime.strptime(checkin_date, "%Y-%m-%d")
+        except ValueError:
+            return jsonify({"status": "error", "message": "Invalid date format. Use YYYY-MM-DD"}), 400
+
+        visitor = visitor_collection.find_one({"username": {"$regex": f"^{username}$", "$options": "i"}})
 
         if not visitor:
             return jsonify({"status": "error", "message": "Visitor not found"}), 404
 
-        # Check if visitor already checked in
-        existing_checkin = pre_registered_collection.find_one({"username": username})
-        if existing_checkin:
+        if pre_registered_collection.find_one({"username": username, "status": "Checked In"}):
             return jsonify({"status": "error", "message": "Visitor already checked in"}), 400
 
-        # Store visitor details in `pre_registered` collection
+        checkin_code = generate_checkin_code()
         checkin_data = {
             "username": visitor["username"],
             "email": visitor["email"],
@@ -126,16 +118,94 @@ def checkin_visitor():
             "host": visitor["host"],
             "purpose": visitor["purpose"],
             "status": "Checked In",
+            "checkin_date": checkin_date,
             "checkin_code": checkin_code,
             "checkin_time": datetime.utcnow().isoformat()
         }
         pre_registered_collection.insert_one(checkin_data)
 
-        return jsonify({"status": "success", "message": "Check-in successful!"})
+        send_checkin_email(visitor["email"], username, checkin_code)
 
+        return jsonify({"status": "success", "message": f"Check-in successful! Check your email for the code: {checkin_code}"}), 201
+    
     except Exception as e:
-        return jsonify({"status": "error", "message": f"Server error: {str(e)}"}), 500    
+        return jsonify({"status": "error", "message": f"Server error: {str(e)}"}), 500
 
+# Route to verify check-in code
+@app.route("/verify-checkin", methods=["POST"])
+def verify_checkin():
+    try:
+        data = request.json
+        username = data.get("username", "").strip()
+        entered_code = data.get("checkin_code", "").strip()
+
+        if not username or not entered_code:
+            return jsonify({"status": "error", "message": "Username and check-in code are required"}), 400
+
+        checkin_record = pre_registered_collection.find_one({"username": username, "status": "Checked In"})
+        
+        if not checkin_record:
+            return jsonify({"status": "error", "message": "No active check-in found for this visitor"}), 404
+
+        if checkin_record["checkin_code"] != entered_code:
+            return jsonify({"status": "error", "message": "Invalid check-in code"}), 401
+
+        return jsonify({"status": "success", "message": "Check-in verified successfully"}), 200
+    
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Server error: {str(e)}"}), 500
+
+# Fetch Pre-Registered Visitor Details
+@app.route("/fetch-visitor", methods=["GET"])
+def fetch_visitor():
+    username = request.args.get("username", "").strip()
+
+    if not username:
+        return jsonify({"status": "error", "message": "Username is required"}), 400
+
+    visitor = visitor_collection.find_one({"username": {"$regex": f"^{username}$", "$options": "i"}}, {"_id": 0})
+
+    if not visitor:
+        return jsonify({"status": "error", "message": "Visitor not found"}), 404
+
+    return jsonify({"status": "success", "visitor": visitor})
+
+# Pre-Register a Visitor and Send Check-In Code
+@app.route("/checkin", methods=["POST"])
+def checkin():
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"status": "error", "message": "Invalid data"}), 400
+
+        visitor_name = data.get("username", "").strip()
+        visitor_email = data.get("email", "").strip()
+        visitor_phone = data.get("phone", "").strip()
+
+        if not visitor_name or not visitor_email:
+            return jsonify({"status": "error", "message": "Username and email are required"}), 400
+
+        if pre_registered_collection.find_one({"username": visitor_name}):
+            return jsonify({"status": "error", "message": "Visitor already checked in"}), 400
+
+        checkin_code = generate_checkin_code()
+
+        visitor_collection.insert_one({
+            **data,
+            "status": "Pending",
+            "checkin_code": checkin_code,
+            "checkin_time": datetime.utcnow().isoformat()
+        })
+
+        subject = "Your Visitor Check-In Code"
+        body = f"Hello {visitor_name},\n\nYour check-in code is: {checkin_code}\n\nUse this code to complete your check-in process."
+        msg = Message(subject=subject, recipients=[visitor_email], body=body)
+        mail.send(msg)
+
+        return jsonify({"status": "success", "message": "Check-in successful! Code sent to email."})
+    
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # Visitor Index Page (Only for Visitors)
 @app.route("/index", methods=["GET"])
@@ -217,125 +287,75 @@ def dashboard():
     visitors = list(visitor_collection.find({}, {"_id": 0}))  # Fetch all visitors
     return render_template("dashboard.html", visitors=visitors)
 
-
-# @app.route("/get-host-phone", methods=["GET"])
-# def get_host_phone():
-#     host = request.args.get("host", "").strip()
-    
-#     if not host:
-#         return jsonify({"status": "error", "message": "Host name is required"}), 400
-
-#     host_data = visitor_collection.find_one({"host": {"$regex": host, "$options": "i"}})
-
-#     if host_data and "host_phone" in host_data:
-#         return jsonify({"status": "success", "phone": host_data["host_phone"]})
-#     else:
-#         return jsonify({"status": "error", "message": "Host phone not found"}), 404
-
-#  Handle Visitor Check-In & Notify Host
-@app.route("/checkin", methods=["POST"])
-def checkin():
+def send_email(visitor_email, visitor_name, status):
     try:
-        data = request.json  # Get JSON data from request
-
-        if not data:
-            return jsonify({"status": "error", "message": "Invalid data"}), 400
+        subject = f"Your Visit Request has been {status}"
+        body = f"Hello {visitor_name},\n\nYour visit request has been {status}.\n\nThank you."
         
-        host_name = data.get("host")
-        visitor_name = data.get("username")
-        visitor_phone = data.get("phone")
-
-        # # Fetch host details
-        # host_data = hosts_collection.find_one({"username": host_name})
-        # if not host_data:
-        #     return jsonify({"status": "error", "message": "Host not found"}), 400
-
-        # host_phone = host_data.get("phone")
-
-        #  Save visitor details in MongoDB
-        visitor = visitor_collection.insert_one({
-            **data,
-            "status": "Pending",
-        })
-        visitor_id = str(visitor.inserted_id)
-
-        #  Store approval request
-        # pending_approvals[host_phone] = {"visitor_id": visitor_id, "visitor_phone": visitor_phone}
-
-        # # Send SMS to host for approval
-        # twilio_client.messages.create(
-        #     body=f"Visitor {visitor_name} wants to meet you. Reply YES to approve or NO to decline.",
-        #     from_=TWILIO_PHONE_NUMBER,
-        #     to=host_phone
-        # )
-
-        return jsonify({"status": "success", "message": "Check-in successful, host notified!"})
+        msg = Message(subject=subject, recipients=[visitor_email], body=body)
+        mail.send(msg)
+        return jsonify({"status": "success", "message": "Email sent successfully!"})
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": str(e)})  # Returns error in API response
+
+def send_checkin_email(visitor_email, visitor_name, checkin_code):
+    """Sends an email with the check-in code to the visitor."""
+    try:
+        subject = "Your Check-In Code"
+        body = f"Hello {visitor_name},\n\nThank you for checking in.\nYour check-in code is: {checkin_code}\n\nBest regards,\nVisitor Management System"
+
+        msg = Message(subject=subject, recipients=[visitor_email], body=body)
+        mail.send(msg)
+        print(f"Check-in email sent to {visitor_email}")
+        return True
+    except Exception as e:
+        print(f"Error sending check-in email: {e}")
+        return False
     
+def send_email(to_email, subject, body):
+    """Send an email using Flask-Mail"""
+    msg = Message(subject, recipients=[to_email])
+    msg.body = body
+    mail.send(msg)
 
-
-
-
-#  Approve or Decline Visitors (Host Only)
-@app.route("/approve_visitor", methods=["POST"])
+#approve visitor
+@app.route('/approve_visitor', methods=['POST'])
 def approve_visitor():
-    if "host" not in session:
-        return jsonify({"status": "error", "message": "Unauthorized"}), 403
-
     data = request.json
     visitor_id = data.get("id")
-    status = data.get("status")  # "Approved" or "Declined"
+    status = data.get("status")
 
     if not visitor_id or not status:
-        return jsonify({"status": "error", "message": "Missing visitor ID or status"}), 400
+        return jsonify({"message": "Invalid request"}), 400
 
     try:
-        visitor_collection.update_one({"_id": ObjectId(visitor_id)}, {"$set": {"status": status}})
-        return jsonify({"status": "success", "message": f"Visitor {status} successfully"})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        visitor_object_id = ObjectId(visitor_id)
+        query = {"_id": visitor_object_id}
+    except:
+        query = {"id": visitor_id}
 
-# Handle Host SMS Responses (YES/NO)
-@app.route("/sms-reply", methods=["POST"])
-def sms_reply():
-    """Handles incoming SMS replies from hosts."""
-    from_number = request.form.get("From")
-    response_text = request.form.get("Body").strip().lower()
+    visitor = visitor_collection.find_one(query)
 
-    # Get pending visitor request
-    approval_data = pending_approvals.get(from_number)
+    if visitor:
+        visitor["status"] = status
+        visitor_email = visitor.get("email")  # Assuming the visitor has an email field
 
-    if not approval_data:
-        return "No pending approvals for this number.", 400
+        if visitor_email:
+            subject = "Visitor Request Update"
+            message = f"Hello {visitor['username']}, your visit request has been {status}."
+            send_email(visitor_email, subject, message)
 
-    visitor_id = approval_data["visitor_id"]
-    visitor_phone = approval_data["visitor_phone"]
+        # Move the visitor to the appropriate collection
+        if status == "Approved":
+            approved_collection.insert_one(visitor)
+        elif status == "Declined":
+            declined_collection.insert_one(visitor)
 
-    #  Determine approval status
-    if response_text == "yes":
-        status = "Approved"
-        visitor_message = " Your visit has been approved. Please proceed!"
-    elif response_text == "no":
-        status = "Declined"
-        visitor_message = " Your visit request has been declined."
+        visitor_collection.delete_one(query)
+
+        return jsonify({"message": f"Visitor {status} successfully!", "success": True}), 200
     else:
-        return "Invalid response. Reply YES or NO.", 400
-
-    #  Update visitor status in MongoDB
-    visitor_collection.update_one({"_id": visitor_id}, {"$set": {"status": status}})
-
-    # #  Notify visitor via SMS
-    # twilio_client.messages.create(
-    #     body=visitor_message,
-    #     from_=TWILIO_PHONE_NUMBER,
-    #     to=visitor_phone
-    # )
-
-    #  Remove from pending approvals
-    del pending_approvals[from_number]
-
-    return "Response processed successfully."
+        return jsonify({"message": "Visitor not found!", "success": False}), 404
 
 
 # Fetch All Visitors (Host Only)
@@ -353,6 +373,42 @@ def logout():
     """Logs out the host and redirects to login page."""
     session.pop("host", None)
     return redirect(url_for("login"))
+
+#check out
+@app.route('/checkout', methods=['GET', 'POST'])
+def checkout():
+    visitor_details = None
+
+    if request.method == 'POST':
+        if 'fetch' in request.form:
+            visitor_name = request.form.get('visitor_name')
+
+            # Case-insensitive search using regex
+            visitor_details = visitor_collection.find_one(
+                {"username": {"$regex": f"^{visitor_name}$", "$options": "i"}}
+            )
+
+            if not visitor_details:
+                flash("Visitor not found!", "danger")
+
+        elif 'confirm_checkout' in request.form:
+            visitor_id = request.form.get('visitor_id')
+
+            try:
+                visitor = visitor_collection.find_one({"_id": ObjectId(visitor_id)})
+
+                if visitor:
+                    visitor["checkout_time"] = datetime.now()
+                    checkout_collection.insert_one(visitor)  # Move data to checkout collection
+                    visitor_collection.delete_one({"_id": ObjectId(visitor_id)})  # Remove from active visitors
+                    flash("Visitor checked out successfully!", "success")
+                    return redirect(url_for('checkout'))
+                else:
+                    flash("Error checking out visitor!", "danger")
+            except Exception as e:
+                flash(f"Error: {str(e)}", "danger")
+
+    return render_template('checkout.html', visitor=visitor_details)
 
 
 #  Run Flask App
