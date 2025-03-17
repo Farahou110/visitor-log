@@ -1,0 +1,171 @@
+    /* General Styling */
+    body {
+    font-family: 'Arial', sans-serif;
+    background: #f9f9f9;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    }
+    /* Modal Styles */
+    .hidden { display: none; }
+    .modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    box-shadow: 0px 0px 10px gray;
+    text-align: center;
+    border-radius: 10px;
+    }
+    .modal-content { padding: 10px; }
+    button {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    border-radius: 5px;
+    }
+    button:hover {
+    background: #45a049;
+    }
+
+    /* Main Container */
+    .container {
+    width: 90%;
+    max-width: 600px;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Form Sections */
+    fieldset {
+    border: 1px solid #ccc;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 8px;
+    }
+
+    /* Form Row */
+    .form-row {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
+    }
+
+    /* Input Fields */
+    input, textarea, select {
+    width: calc(100% - 24px); /* Fix width issues */
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    margin-top: 5px;
+    box-sizing: border-box;
+    }
+
+    /* Adjust textarea height */
+    textarea {
+    height: 80px;
+    resize: none;
+    }
+
+    /* Dropdown Styling */
+    select {
+    appearance: none;
+    background: #fff url('data:image/svg+xml;utf8,<svg fill="%23666" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M5.516 7.548a1 1 0 011.414 0L10 10.618l3.07-3.07a1 1 0 111.415 1.414l-3.778 3.779a1 1 0 01-1.415 0L5.516 8.962a1 1 0 010-1.414z"/></svg>') no-repeat right 10px center;
+    }
+
+    /* Vehicle & Pre-Registration Checkbox */
+    .vehicle-label, .prereg-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    }
+
+    /* Hidden Sections */
+    .hidden {
+    display: none;
+    }
+
+    /* Buttons */
+    .btn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 5px;
+    font-size: 18px;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.3s ease;
+    }
+
+    .btn:hover {
+    background: #218838;
+    }
+
+    .disabled {
+    background: gray;
+    cursor: not-allowed;
+    }
+
+    /* Camera & Photo Capture Styling */
+    #camera-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    }
+
+    /* Video Preview */
+    #video {
+    width: 100%;
+    max-width: 400px;
+    border-radius: 8px;
+    border: 2px solid #ccc;
+    }
+
+    /* Captured Photo Styling */
+    #photo-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    }
+
+    #captured-photo {
+    width: 100%;
+    max-width: 300px; /* Adjust image size */
+    height: auto;
+    margin: auto;
+    border-radius: 8px;
+    border: 2px solid #ccc;
+    }
+
+    /* Pre-Registration Inputs */
+    #prereg-inputs {
+    display: none; /* Initially hidden */
+    margin-top: 10px;
+    }
+
+    #prereg-inputs.active {
+
+    display: block; /* Show when checked */
+    }
+
+    /* Footer */
+    footer {
+    text-align: center;
+    margin-top: 20px;
+    }
