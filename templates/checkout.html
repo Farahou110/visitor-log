@@ -4,40 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visitor Checkout</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #494e54, #547f8d);
             text-align: center;
-            background-color: #f8f9fa;
             margin: 0;
             padding: 50px;
         }
         .checkout-container {
-            max-width: 400px;
             background: white;
-            padding: 30px;
+            max-width: 400px;
             margin: auto;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
         }
         h1 {
             color: #333;
             margin-bottom: 20px;
-            font-size: 24px;
         }
-        input, button {
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 15px;
+            text-align: left;
+        }
+        input {
             width: 100%;
-            padding: 12px;
-            margin-top: 10px;
+            padding: 10px;
+            margin-top: 5px;
             border: 1px solid #ccc;
             border-radius: 5px;
             font-size: 16px;
         }
         .btn {
-            background-color: #007bff;
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            background-color: #007BFF;
             color: white;
+            font-size: 18px;
             border: none;
+            border-radius: 5px;
             cursor: pointer;
+            transition: background-color 0.3s ease;
         }
         .btn:hover {
             background-color: #0056b3;
@@ -48,39 +60,161 @@
         .btn-secondary:hover {
             background-color: #218838;
         }
-        .visitor-details {
-            text-align: left;
+        .info-container {
             margin-top: 20px;
+            padding: 20px;
+            background: #e9ecef;
+            border-radius: 5px;
+            text-align: left;
+            display: none;
+        }
+        .info-container p {
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        .error {
+            color: red;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .success {
+            color: green;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .loading-spinner {
+            display: none;
+            margin: 20px auto;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007BFF;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
 
-    <div class="checkout-container">
-        <h1>Visitor Checkout</h1>
+<div class="checkout-container">
+    <h1><i class="fa-sign-out-alt fas"></i> Visitor Checkout</h1>
 
-        <!-- Fetch Visitor Details Form -->
-        <form method="POST">
-            <input type="text" name="visitor_name" placeholder="Enter Visitor Name" required>
-            <button type="submit" name="fetch" class="btn">Fetch Details</button>
-        </form>
+    <label for="visitor-name"><i class="fa-user fas"></i> Enter Visitor Name:</label>
+    <input type="text" id="visitor-name" placeholder="Enter visitor name..." required>
 
-        {% if visitor %}
-        <div class="visitor-details">
-            <h2>Visitor Details</h2>
-            <p><strong>Name:</strong> {{ visitor.name }}</p>
-            <p><strong>Email:</strong> {{ visitor.email }}</p>
-            <p><strong>Phone:</strong> {{ visitor.phone }}</p>
-            <p><strong>Check-in Time:</strong> {{ visitor.checkin_time }}</p>
+    <button class="btn" id="fetch-btn"><i class="fa-search fas"></i> Fetch Details</button>
+    <div class="loading-spinner" id="fetch-spinner"></div>
+    <div id="error-message" class="error"></div>
 
-            <!-- Confirm Checkout Form -->
-            <form method="POST">
-                <input type="hidden" name="visitor_id" value="{{ visitor._id }}">
-                <button type="submit" name="confirm_checkout" class="btn btn-secondary">Check Out</button>
-            </form>
-        </div>
-        {% endif %}
+    <div class="info-container" id="visitor-info">
+        <h3><i class="fa-info-circle fas"></i> Visitor Information</h3>
+        <p><strong>Name:</strong> <span id="visitor-name-display"></span></p>
+        <p><strong>Email:</strong> <span id="visitor-email"></span></p>
+        <p><strong>Phone:</strong> <span id="visitor-phone"></span></p>
+        <p><strong>Check-in Time:</strong> <span id="visitor-checkin"></span></p>
+
+        <!-- Checkout Button -->
+        <button class="btn btn-secondary" id="checkout-btn"><i class="fa-check fas"></i> Check Out</button>
+        <div class="loading-spinner" id="checkout-spinner"></div>
+        <div id="checkout-message" class="error"></div>
     </div>
+</div>
+
+<script>
+    document.getElementById("fetch-btn").addEventListener("click", function () {
+        const visitorName = document.getElementById("visitor-name").value.trim();
+        const errorMessage = document.getElementById("error-message");
+        const visitorInfo = document.getElementById("visitor-info");
+        const fetchSpinner = document.getElementById("fetch-spinner");
+
+        if (!visitorName) {
+            errorMessage.textContent = "Please enter a valid name.";
+            visitorInfo.style.display = "none";
+            return;
+        }
+
+        // Show loading spinner
+        fetchSpinner.style.display = "block";
+        errorMessage.textContent = "";
+
+        fetch(`http://127.0.0.1:5001/fetch-visitor?username=${encodeURIComponent(visitorName)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    const visitor = data.visitor;
+                    document.getElementById("visitor-name-display").textContent = visitor.username || "N/A";
+                    document.getElementById("visitor-email").textContent = visitor.email || "N/A";
+                    document.getElementById("visitor-phone").textContent = visitor.phone || "N/A";
+                    document.getElementById("visitor-checkin").textContent = visitor.checkin_time || "N/A";
+
+                    visitorInfo.style.display = "block";
+                    errorMessage.textContent = "";
+                } else {
+                    errorMessage.textContent = "No visitor found with this name.";
+                    visitorInfo.style.display = "none";
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching visitor info:", error);
+                errorMessage.textContent = "Error fetching visitor details. Try again.";
+                visitorInfo.style.display = "none";
+            })
+            .finally(() => {
+                fetchSpinner.style.display = "none"; // Hide loading spinner
+            });
+    });
+
+    document.getElementById("checkout-btn").addEventListener("click", function () {
+    const visitorName = document.getElementById("visitor-name-display").textContent;
+    const checkoutMessage = document.getElementById("checkout-message");
+    const checkoutSpinner = document.getElementById("checkout-spinner");
+
+    if (!visitorName || visitorName === "N/A") {
+        checkoutMessage.textContent = "No visitor selected for checkout.";
+        return;
+    }
+
+    // Show loading spinner
+    checkoutSpinner.style.display = "block";
+    checkoutMessage.textContent = "";
+
+    const checkoutData = { username: visitorName };
+
+    fetch("http://127.0.0.1:5001/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(checkoutData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("Checkout Response:", data);
+
+        if (data.status === "success") {
+            checkoutMessage.style.color = "green";
+            checkoutMessage.textContent = "Checkout successful!";
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000); // Refresh the page after 2 seconds
+        } else {
+            checkoutMessage.style.color = "red";
+            checkoutMessage.textContent = data.message || "Checkout failed. Try again.";
+        }
+    })
+    .catch(error => {
+        console.error("Error during checkout:", error);
+        checkoutMessage.textContent = "Error processing checkout.";
+    })
+    .finally(() => {
+        checkoutSpinner.style.display = "none";
+    });
+});
+
+</script>
 
 </body>
 </html>

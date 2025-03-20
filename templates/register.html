@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Host Registration</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
+             background: linear-gradient(135deg, #494e54, #547f8d);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -25,12 +26,15 @@
         }
         h2 {
             color: #333;
+            margin-bottom: 10px;
         }
         .flash-message {
             padding: 10px;
             border-radius: 5px;
             margin-bottom: 15px;
             text-align: center;
+            font-size: 14px;
+            display: none;
         }
         .error {
             background-color: #ffdddd;
@@ -45,31 +49,49 @@
             flex-direction: column;
             gap: 10px;
         }
-        label {
-            font-weight: bold;
-            text-align: left;
-        }
-        input {
-            padding: 8px;
-            width: 100%;
+        .input-group {
+            display: flex;
+            align-items: center;
             border: 1px solid #ccc;
             border-radius: 5px;
+            overflow: hidden;
+            background: #fff;
+        }
+        .input-group input {
+            border: none;
+            flex: 1;
+            padding: 10px;
             font-size: 14px;
+        }
+        .input-group .icon {
+            padding: 10px;
+            background: #f8f9fa;
+            color: #666;
+            border-right: 1px solid #ccc;
+        }
+        .toggle-password {
+            cursor: pointer;
+            padding: 10px;
+            color: #666;
+            background: #f8f9fa;
+            border-left: 1px solid #ccc;
         }
         button {
             background-color: #007bff;
             color: #ffffff;
             border: none;
-            padding: 10px;
+            padding: 12px;
             font-size: 16px;
             cursor: pointer;
             border-radius: 5px;
+            transition: background 0.3s ease;
         }
         button:hover {
             background-color: #0056b3;
         }
         p {
             margin-top: 15px;
+            font-size: 14px;
         }
         a {
             color: #007bff;
@@ -82,35 +104,99 @@
 </head>
 <body>
     <div class="container">
-        <h2>Host Registration</h2>
+        <h2><i class="fa-user-plus fas"></i> Host Registration</h2>
 
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=True) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="flash-message {{ category }}">{{ message }}</div>
+                <div class="{{ category }} category flash-message">{{ message }}</div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
 
         <!-- Registration Form -->
-        <form method="POST" action="{{ url_for('register_host') }}">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" required>
+        <form method="POST" action="{{ url_for('register_host') }}" onsubmit="return validateForm()">
+            <label for="username"><i class="fa-user fas"></i> Username</label>
+            <div class="input-group">
+                <span class="icon"><i class="fa-user fas"></i></span>
+                <input type="text" id="username" name="username" required>
+            </div>
 
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" required>
+            <label for="email"><i class="fa-envelope fas"></i> Email</label>
+            <div class="input-group">
+                <span class="icon"><i class="fa-envelope fas"></i></span>
+                <input type="email" id="email" name="email" required>
+            </div>
 
-            <label for="phone">Phone</label>
-            <input type="text" id="phone" name="phone" required>
+            <label for="phone"><i class="fa-phone fas"></i> Phone</label>
+            <div class="input-group">
+                <span class="icon"><i class="fa-phone fas"></i></span>
+                <input type="text" id="phone" name="phone" required>
+            </div>
 
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
+            <label for="password"><i class="fa-lock fas"></i> Password</label>
+            <div class="input-group">
+                <span class="icon"><i class="fa-lock fas"></i></span>
+                <input type="password" id="password" name="password" required>
+                <span class="toggle-password" onclick="togglePassword()"><i class="fa-eye fas"></i></span>
+            </div>
 
-            <button type="submit">Register</button>
+            <button type="submit"><i class="fa-user-check fas"></i> Register</button>
         </form>
 
         <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
     </div>
+
+    <script>
+        // Flash message fade out animation
+        document.addEventListener("DOMContentLoaded", function () {
+            let flashMessages = document.querySelectorAll('.flash-message');
+            flashMessages.forEach(msg => {
+                msg.style.display = "block";
+                setTimeout(() => {
+                    msg.style.opacity = "0";
+                    setTimeout(() => msg.style.display = "none", 500);
+                }, 3000);
+            });
+        });
+
+        // Toggle Password Visibility
+        function togglePassword() {
+            let passwordInput = document.getElementById("password");
+            let toggleIcon = document.querySelector(".toggle-password i");
+
+            if (passwordInput.type === "password") {
+                passwordInput.type = "text";
+                toggleIcon.classList.remove("fa-eye");
+                toggleIcon.classList.add("fa-eye-slash");
+            } else {
+                passwordInput.type = "password";
+                toggleIcon.classList.remove("fa-eye-slash");
+                toggleIcon.classList.add("fa-eye");
+            }
+        }
+
+        // Simple Form Validation
+        function validateForm() {
+            let username = document.getElementById("username").value.trim();
+            let email = document.getElementById("email").value.trim();
+            let phone = document.getElementById("phone").value.trim();
+            let password = document.getElementById("password").value.trim();
+
+            if (username === "" || email === "" || phone === "" || password === "") {
+                alert("All fields are required!");
+                return false;
+            }
+
+            let phonePattern = /^[0-9]{10}$/;
+            if (!phonePattern.test(phone)) {
+                alert("Please enter a valid 10-digit phone number.");
+                return false;
+            }
+
+            return true;
+        }
+    </script>
 </body>
 </html>

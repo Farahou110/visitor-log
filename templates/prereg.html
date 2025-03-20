@@ -1,184 +1,281 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pre-Registration Lookup</title>
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f4f4f4;
-        text-align: center;
-        margin: 0;
-        padding: 50px;
-    }
-    .container {
-        background: white;
-        max-width: 400px;
-        margin: auto;
-        padding: 30px;
-        border-radius: 8px;
-        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    h1 {
-        color: #333;
-        margin-bottom: 20px;
-    }
-    label {
-        font-weight: bold;
-        display: block;
-        margin-top: 15px;
-        text-align: left;
-    }
-    input {
-        width: 100%;
-        padding: 10px;
-        margin-top: 5px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        font-size: 16px;
-    }
-    .btn {
-        width: 100%;
-        padding: 12px;
-        margin-top: 20px;
-        background-color: #007BFF;
-        color: white;
-        font-size: 18px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-    .btn:hover {
-        background-color: #0056b3;
-    }
-    .info-container {
-        margin-top: 20px;
-        padding: 20px;
-        background: #e9ecef;
-        border-radius: 5px;
-        text-align: left;
-        display: none; /* Hidden initially */
-    }
-    .info-container p {
-        font-size: 16px;
-        margin: 5px 0;
-    }
-    .error {
-        color: red;
-        font-size: 14px;
-        margin-top: 10px;
-    }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pre-Registration Lookup</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #494e54, #547f8d);
+        }
+
+        .container {
+            width: 400px;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            text-align: left;
+            font-weight: 500;
+            margin-top: 15px;
+            color: #555;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+
+        input:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0px 0px 5px rgba(0, 123, 255, 0.5);
+        }
+
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 15px;
+            transition: 0.3s;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        .error, .success {
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .loading-spinner {
+            display: none;
+            margin: 20px auto;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007BFF;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .info-container {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #e9ecef;
+            border-radius: 5px;
+            text-align: left;
+        }
+
+        .info-container p {
+            font-size: 16px;
+            margin: 5px 0;
+        }
+
+        .register-link {
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .register-link a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 450px) {
+            .container {
+                width: 90%;
+                padding: 20px;
+            }
+        }
+    </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Pre-Registration Lookup</h1>
-    
-    <label for="prereg-name">Enter Your Name:</label>
-    <input type="text" id="prereg-name" placeholder="Enter your name..." required>
-    
-    <button class="btn" id="fetch-btn">Fetch Details</button>
-    <p style="margin-top: 10px;">
-        Not pre-registered? <a href="{{ url_for('index') }}" style="color: #007BFF; text-decoration: none;">Check in here</a>
-    </p>
+    <div class="container">
+        <h1>Pre-Registration Lookup</h1>
+        
+        <label for="prereg-name"><i class="fa-user fas"></i> Enter Your Name:</label>
+        <input type="text" id="prereg-name" placeholder="Enter your name..." required>
+        
+        <button class="btn" id="fetch-btn"><i class="fa-search fas"></i> Fetch Details</button>
+        <div class="loading-spinner" id="fetch-spinner"></div>
 
-    <div id="error-message" class="error"></div>
+        <p class="register-link">
+            Not pre-registered? <a href="{{ url_for('index') }}">Check in here</a>
+        </p>
 
-    <div class="info-container" id="visitor-info">
-        <h3>Visitor Information</h3>
-        <p><strong>Name:</strong> <span id="visitor-name"></span></p>
-        <p><strong>Email:</strong> <span id="visitor-email"></span></p>
-        <p><strong>Phone:</strong> <span id="visitor-phone"></span></p>
-        <p><strong>Host:</strong> <span id="visitor-host"></span></p>
-        <p><strong>Purpose:</strong> <span id="visitor-purpose"></span></p>
-        <p><strong>Status:</strong> <span id="visitor-status"></span></p>
+        <p id="error-message" class="error"></p>
 
-        <!-- New: Check-in Section -->
-        <label for="checkin-code">Enter Check-In Code:</label>
-        <input type="text" id="checkin-code" placeholder="Enter your code..." required>
+        <div class="info-container" id="visitor-info">
+            <h3><i class="fa-info-circle fas"></i> Visitor Information</h3>
+            <p><strong>Name:</strong> <span id="visitor-name"></span></p>
+            <p><strong>Email:</strong> <span id="visitor-email"></span></p>
+            <p><strong>Phone:</strong> <span id="visitor-phone"></span></p>
+            <p><strong>Host:</strong> <span id="visitor-host"></span></p>
+            <p><strong>Purpose:</strong> <span id="visitor-purpose"></span></p>
+            <p><strong>Status:</strong> <span id="visitor-status"></span></p>
 
-        <button class="btn" id="checkin-btn">Check In</button>
-        <div id="checkin-message" class="error"></div>
+            <label for="checkin-code"><i class="fa-key fas"></i> Enter Check-In Code:</label>
+            <input type="text" id="checkin-code" placeholder="Enter your code..." required>
+
+            <button class="btn" id="checkin-btn"><i class="fa-check fas"></i> Check In</button>
+            <div class="loading-spinner" id="checkin-spinner"></div>
+            <p id="checkin-message" class="error"></p>
+        </div>
     </div>
-</div>
 
-<script>
-    document.getElementById("fetch-btn").addEventListener("click", function () {
-const preregName = document.getElementById("prereg-name").value.trim();
-const errorMessage = document.getElementById("error-message");
-const visitorInfo = document.getElementById("visitor-info");
+    <script>
+       document.getElementById("fetch-btn").addEventListener("click", function () {
+    const preregName = document.getElementById("prereg-name").value.trim();
+    const errorMessage = document.getElementById("error-message");
+    const visitorInfo = document.getElementById("visitor-info");
+    const fetchSpinner = document.getElementById("fetch-spinner");
 
-if (!preregName) {
-    errorMessage.textContent = "Please enter a valid name.";
-    visitorInfo.style.display = "none";
-    return;
-}
-
-fetch(`http://127.0.0.1:5001/fetch-visitor?username=${encodeURIComponent(preregName)}`)
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === "success") {
-            const visitor = data.visitor;
-            document.getElementById("visitor-name").textContent = visitor.username || "N/A";
-            document.getElementById("visitor-email").textContent = visitor.email || "N/A";
-            document.getElementById("visitor-phone").textContent = visitor.phone || "N/A";
-            document.getElementById("visitor-host").textContent = visitor.host || "N/A";
-            document.getElementById("visitor-purpose").textContent = visitor.purpose || "N/A";
-            document.getElementById("visitor-status").textContent = visitor.status || "N/A";
-
-            visitorInfo.style.display = "block";
-            errorMessage.textContent = "";
-        } else {
-            errorMessage.textContent = "No visitor found with this name.";
-            visitorInfo.style.display = "none";
-        }
-    })
-    .catch(error => {
-        console.error("Error fetching visitor info:", error);
-        errorMessage.textContent = "Error fetching visitor details. Try again.";
+    if (!preregName) {
+        errorMessage.textContent = "Please enter a valid name.";
+        errorMessage.style.display = "block";
         visitorInfo.style.display = "none";
-    });
+        return;
+    }
+
+    fetchSpinner.style.display = "block";
+    errorMessage.style.display = "none";
+
+    fetch(`/check-visitor?username=${encodeURIComponent(preregName)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                const visitor = data.visitor;
+                document.getElementById("visitor-name").textContent = visitor.username || "N/A";
+                document.getElementById("visitor-email").textContent = visitor.email || "N/A";
+                document.getElementById("visitor-phone").textContent = visitor.phone || "N/A";
+                document.getElementById("visitor-host").textContent = visitor.host || "N/A";
+                document.getElementById("visitor-purpose").textContent = visitor.purpose || "N/A";
+                document.getElementById("visitor-status").textContent = visitor.status || "N/A";
+
+                visitorInfo.style.display = "block";
+            } else {
+                errorMessage.textContent = "No visitor found with this name.";
+                errorMessage.style.display = "block";
+                visitorInfo.style.display = "none";
+            }
+        })
+        .catch(() => {
+            errorMessage.textContent = "Error fetching visitor details. Try again.";
+            errorMessage.style.display = "block";
+            visitorInfo.style.display = "none";
+        })
+        .finally(() => {
+            fetchSpinner.style.display = "none";
+        });
 });
 
+// Handle check-in with verification and MongoDB storage
 document.getElementById("checkin-btn").addEventListener("click", function () {
-const checkinCode = document.getElementById("checkin-code").value.trim();
-const visitorName = document.getElementById("visitor-name").textContent;
-const checkinMessage = document.getElementById("checkin-message");
+    const checkinCode = document.getElementById("checkin-code").value.trim();
+    const visitorName = document.getElementById("visitor-name").textContent;
+    const checkinMessage = document.getElementById("checkin-message");
+    const checkinSpinner = document.getElementById("checkin-spinner");
 
-if (!checkinCode) {
-    checkinMessage.textContent = "Please enter a valid check-in code.";
-    return;
-}
+    if (!checkinCode) {
+        checkinMessage.textContent = "Please enter a valid check-in code.";
+        checkinMessage.style.color = "red";
+        return;
+    }
 
-const checkinData = {
-    username: visitorName,
-    checkin_code: checkinCode
-};
+    checkinSpinner.style.display = "block";
+    checkinMessage.textContent = "";
 
-fetch("http://127.0.0.1:5001/verify-checkin", {
+    fetch("/verify-checkin", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(checkinData)
+    body: JSON.stringify({ username: visitorName, checkin_code: checkinCode })
 })
-.then(response => response.json())
+.then(response => {
+    if (!response.ok) {
+        return response.text().then(text => { throw new Error(text) });
+    }
+    return response.json();
+})
 .then(data => {
+    console.log("Check-in response:", data);
     if (data.status === "success") {
         checkinMessage.style.color = "green";
-        checkinMessage.textContent = "Check-in verified successfully!";
+        checkinMessage.textContent = "Check-in successful!";
+        document.getElementById("visitor-status").textContent = "Checked In";
     } else {
         checkinMessage.style.color = "red";
         checkinMessage.textContent = data.message || "Check-in failed. Try again.";
     }
 })
 .catch(error => {
-    console.error("Error during check-in:", error);
-    checkinMessage.textContent = "Error processing check-in.";
+    console.error("Check-in Error:", error);
+    checkinMessage.textContent = "Server error occurred. Check console.";
+    checkinMessage.style.color = "red";
+})
+.finally(() => {
+    checkinSpinner.style.display = "none";
 });
 });
 
-</script>
+    </script>
 
 </body>
 </html>

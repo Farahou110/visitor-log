@@ -4,95 +4,204 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Host Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            margin: 0;
+         background: linear-gradient(135deg, #494e54, #547f8d);
         }
-        .login-container {
-            background: #fff;
-            padding: 20px;
+
+        .container {
+            width: 380px;
+            background: white;
+            padding: 30px;
             border-radius: 8px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-            width: 300px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             text-align: center;
         }
+
         h2 {
             margin-bottom: 20px;
             color: #333;
+            font-weight: 600;
         }
+
         .error-message {
+            display: none;
             color: red;
             font-size: 14px;
+            background: rgba(255, 0, 0, 0.1);
+            padding: 10px;
+            border-radius: 5px;
             margin-bottom: 15px;
         }
+
         label {
             display: block;
             text-align: left;
-            font-weight: bold;
+            font-weight: 500;
             margin-bottom: 5px;
             color: #555;
         }
+
         input {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             margin-bottom: 15px;
             border: 1px solid #ccc;
             border-radius: 5px;
             font-size: 14px;
+            transition: 0.3s;
         }
-        button {
-            background-color: #007bff;
+
+        input:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0px 0px 5px rgba(0, 123, 255, 0.5);
+        }
+
+        .btn {
+            background: #007bff;
             color: white;
             border: none;
-            padding: 10px;
+            padding: 12px;
             border-radius: 5px;
             cursor: pointer;
             width: 100%;
             font-size: 16px;
+            font-weight: 600;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        button:hover {
-            background-color: #0056b3;
+
+        .btn:hover {
+            background: #0056b3;
         }
+
+        .btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+
         .register-link {
             margin-top: 15px;
             font-size: 14px;
         }
+
         .register-link a {
             color: #007bff;
             text-decoration: none;
+            font-weight: 500;
         }
+
         .register-link a:hover {
             text-decoration: underline;
+        }
+
+        .loading-spinner {
+            display: none;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 400px) {
+            .container {
+                width: 90%;
+                padding: 20px;
+            }
         }
     </style>
 </head>
 <body>
 
-    <div class="login-container">
+    <div class="container">
         <h2>Host Login</h2>
-        {% if error %}
-            <p class="error-message">{{ error }}</p>
-        {% endif %}
-        <form method="POST" >
-            <label for="username">Username</label>
+        <p class="error-message" id="error-message"></p>
+        <form id="login-form">
+            <label for="username"><i class="fa-user fas"></i> Username</label>
             <input type="text" id="username" name="username" required>
-            
-            <label for="password">Password</label>
+
+            <label for="password"><i class="fa-lock fas"></i> Password</label>
             <input type="password" id="password" name="password" required>
-            
-            <button type="submit">Login</button>
+
+            <button type="submit" class="btn" id="login-btn">
+                <span>Login</span>
+                <div class="loading-spinner" id="login-spinner"></div>
+            </button>
         </form>
 
         <p class="register-link">
             Don't have an account? <a href="{{ url_for('register_host') }}">Register here</a>
         </p>
     </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            let loginForm = document.getElementById("login-form");
+            let errorMessage = document.getElementById("error-message");
+            let loginBtn = document.getElementById("login-btn");
+            let loginSpinner = document.getElementById("login-spinner");
+
+            loginForm.addEventListener("submit", async function(event) {
+                event.preventDefault(); // Prevent default form submission
+                
+                let username = document.getElementById("username").value;
+                let password = document.getElementById("password").value;
+
+                // Show loading spinner
+                loginSpinner.style.display = "inline-block";
+                loginBtn.disabled = true;
+                errorMessage.style.display = "none";
+
+                try {
+                    let response = await fetch("/login", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ username, password })
+                    });
+
+                    let result = await response.json(); // Parse response JSON
+
+                    if (result.status === "success") {
+                        window.location.href = result.redirect_url; // Redirect to dashboard
+                    } else {
+                        errorMessage.textContent = result.message;
+                        errorMessage.style.display = "block"; // Show error message
+                    }
+                } catch (error) {
+                    errorMessage.textContent = "Server error, please try again.";
+                    errorMessage.style.display = "block";
+                } finally {
+                    // Hide loading spinner
+                    loginSpinner.style.display = "none";
+                    loginBtn.disabled = false;
+                }
+            });
+        });
+    </script>
 
 </body>
 </html>

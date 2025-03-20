@@ -8,11 +8,14 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
+    <!-- Font Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
     <!-- Custom Styles -->
     <style>
         body {
             font-family: 'Arial', sans-serif;
-            background-color: #f4f7f6;
+            background: linear-gradient(135deg, #494e54, #547f8d);
             padding: 20px;
         }
         .container {
@@ -21,11 +24,7 @@
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s ease-in-out;
         }
-        /* .container:hover {
-            transform: scale(1.02);
-        } */
         h1 {
             text-align: center;
             color: #333;
@@ -77,6 +76,7 @@
             font-size: 14px;
             color: white;
             cursor: pointer;
+            margin: 2px;
         }
         .btn-approve {
             background-color: #28a745;
@@ -95,6 +95,25 @@
         .btn-action:focus {
             outline: none;
             box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+        }
+        .loading-spinner {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007BFF;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
         }
     </style>
 
@@ -124,17 +143,18 @@
                     <td>{{ visitor.host }}</td>
                     <td>{{ visitor.purpose }}</td>
                     <td>
-                        <span id="status-{{ visitor.id }}" class="status status-{{ visitor.status | lower }}">
+                        <span id="status-{{ visitor.id }}" class="{{ visitor.status | lower }} status status-{{ visitor.status }}">
                             {{ visitor.status or 'Pending' }}
                         </span>
                     </td>
                     <td>
                         <button class="btn-action btn-approve" onclick="updateStatus('{{ visitor.id }}', 'Approved', '{{ visitor.host_phone }}')">
-                              Approve
+                            <i class="fa-check fas"></i> Approve
                         </button>
                         <button class="btn-action btn-decline" onclick="updateStatus('{{ visitor.id }}', 'Declined', '{{ visitor.host_phone }}')">
-                              Decline
+                            <i class="fa-times fas"></i> Decline
                         </button>
+                        <div class="loading-spinner" id="spinner-{{ visitor.id }}"></div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -142,40 +162,63 @@
         </table>
     </div>
 
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto">Notification</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toast-message"></div>
+    </div>
+
     <script>
-       function updateStatus(visitorId, status, hostPhone) {
-    $.ajax({
-        url: "/approve_visitor",
-        type: "POST",
-        contentType: "application/json",
-        data: JSON.stringify({ id: visitorId, status: status, host_phone: hostPhone }),
-        success: function (response) {
-            if (response.success) {
-                alert(response.message);
+        function updateStatus(visitorId, status, hostPhone) {
+            const spinner = document.getElementById("spinner-" + visitorId);
+            const toast = new bootstrap.Toast(document.getElementById("toast"));
+            const toastMessage = document.getElementById("toast-message");
 
-                // Update status text
-                let statusCell = document.getElementById("status-" + visitorId);
-                if (statusCell) {
-                    statusCell.innerText = status;
-                    statusCell.className = "status status-" + status.toLowerCase();
-                }
+            // Show loading spinner
+            spinner.style.display = "inline-block";
 
-                //  Remove row from table after approval/decline
-                let row = document.getElementById("row-" + visitorId);
-                if (row) {
-                    setTimeout(() => row.remove(), 500); // Delay for smoother UX
+            $.ajax({
+                url: "/approve_visitor",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ id: visitorId, status: status, host_phone: hostPhone }),
+                success: function (response) {
+                    if (response.success) {
+                        toastMessage.textContent = response.message;
+                        toast.show();
+
+                        // Update status text
+                        let statusCell = document.getElementById("status-" + visitorId);
+                        if (statusCell) {
+                            statusCell.innerText = status;
+                            statusCell.className = "status status-" + status.toLowerCase();
+                        }
+
+                        // Remove row from table after approval/decline
+                        let row = document.getElementById("row-" + visitorId);
+                        if (row) {
+                            setTimeout(() => row.remove(), 500); // Delay for smoother UX
+                        }
+                    } else {
+                        toastMessage.textContent = "Error: " + response.message;
+                        toast.show();
+                    }
+                },
+                error: function () {
+                    toastMessage.textContent = "Error updating visitor status.";
+                    toast.show();
+                },
+                complete: function () {
+                    spinner.style.display = "none"; // Hide loading spinner
                 }
-            } else {
-                alert("Error: " + response.message);
-            }
-        },
-        error: function () {
-            alert("Error updating visitor status.");
+            });
         }
-    });
-}
-
     </script>
 
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

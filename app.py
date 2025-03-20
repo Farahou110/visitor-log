@@ -1,12 +1,14 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
-import re
 from pymongo import MongoClient
 from flask_mail import Mail, Message
 from bson import ObjectId
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+import datetime
+from datetime import datetime   
+import re   
 import random           
 import string
+
 
 
 #  Flask App Initialization
@@ -136,24 +138,47 @@ def checkin_visitor():
 def verify_checkin():
     try:
         data = request.json
-        username = data.get("username", "").strip()
-        entered_code = data.get("checkin_code", "").strip()
+        if not data:
+            print("Error: Invalid JSON data received")
+            return jsonify({"status": "error", "message": "Invalid JSON data received"}), 400
 
-        if not username or not entered_code:
-            return jsonify({"status": "error", "message": "Username and check-in code are required"}), 400
+        username = data.get("username")
+        checkin_code = str(data.get("checkin_code"))  # Convert to string to match DB format
 
-        checkin_record = pre_registered_collection.find_one({"username": username, "status": "Checked In"})
-        
-        if not checkin_record:
-            return jsonify({"status": "error", "message": "No active check-in found for this visitor"}), 404
+        if not username or not checkin_code:
+            print("Error: Missing username or check-in code")
+            return jsonify({"status": "error", "message": "Missing username or check-in code"}), 400
 
-        if checkin_record["checkin_code"] != entered_code:
-            return jsonify({"status": "error", "message": "Invalid check-in code"}), 401
+        print(f"Checking for username: {username}, checkin_code: {checkin_code}")
 
-        return jsonify({"status": "success", "message": "Check-in verified successfully"}), 200
-    
+        # Case-insensitive search
+        visitor = visitor_collection.find_one({
+            "username": {"$regex": f"^{username}$", "$options": "i"},
+            "checkin_code": checkin_code
+        })
+
+        if visitor:
+            checkin_data = {
+                "username": username,
+                "checkin_time": datetime.datetime.utcnow(),
+                "status": "Checked In"
+            }
+
+            pre_registered_collection.update_one(
+                {"username": username},
+                {"$set": checkin_data},
+                upsert=True
+            )
+
+            return jsonify({"status": "success", "message": "Check-in successful!"})
+
+        print("Error: Invalid check-in code")
+        return jsonify({"status": "error", "message": "Invalid check-in code"}), 400
+
     except Exception as e:
-        return jsonify({"status": "error", "message": f"Server error: {str(e)}"}), 500
+        print("Server error during check-in:", str(e))  # Logs error in console
+        return jsonify({"status": "error", "message": "Server error occurred"}), 500
+
 
 # Fetch Pre-Registered Visitor Details
 @app.route("/fetch-visitor", methods=["GET"])
@@ -170,7 +195,7 @@ def fetch_visitor():
 
     return jsonify({"status": "success", "visitor": visitor})
 
-# Pre-Register a Visitor and Send Check-In Code
+#Register a Visitor and Send Check-In Code
 @app.route("/checkin", methods=["POST"])
 def checkin():
     try:
@@ -262,20 +287,34 @@ def register_host():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     """Handles host login and session management."""
+    
     if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
+        if request.is_json:
+            data = request.get_json()
+            username = data.get("username", "").strip()
+            password = data.get("password", "").strip()
+        else:
+            username = request.form.get("username", "").strip()
+            password = request.form.get("password", "").strip()
+
+        if not username or not password:
+            return jsonify({"status": "error", "message": "Missing username or password"}), 400
 
         host = hosts_collection.find_one({"username": username})
         
-        if host and check_password_hash(host["password"], password):  #  Correct password check
-            session["host"] = username  # Store in session
-            return redirect(url_for("dashboard"))  # Redirect to dashboard
+        if not host:
+            return jsonify({"status": "error", "message": "Invalid username or password"}), 401
 
-        return render_template("login.html", error="Invalid username or password")
+        if not check_password_hash(host["password"], password):
+            return jsonify({"status": "error", "message": "Invalid username or password"}), 401
+
+        # Store session
+        session["host"] = username
+
+        # Return full URL for redirection
+        return jsonify({"status": "success", "redirect_url": url_for('dashboard', _external=True)}), 200
 
     return render_template("login.html")
-
 
 # Host Dashboard (Restricted Access)
 @app.route("/dashboard", methods=["GET"])
@@ -377,39 +416,73 @@ def logout():
 #check out
 @app.route('/checkout', methods=['GET', 'POST'])
 def checkout():
-    visitor_details = None
-
     if request.method == 'POST':
-        if 'fetch' in request.form:
-            visitor_name = request.form.get('visitor_name')
+        try:
+            # Check if the request is JSON
+            if request.is_json:
+                data = request.get_json()
+                visitor_name = data.get("username", "").strip()
 
-            # Case-insensitive search using regex
-            visitor_details = visitor_collection.find_one(
-                {"username": {"$regex": f"^{visitor_name}$", "$options": "i"}}
-            )
+                if not visitor_name:
+                    return jsonify({"status": "error", "message": "Invalid visitor name"}), 400
 
-            if not visitor_details:
-                flash("Visitor not found!", "danger")
+                # Find the visitor by name (case-insensitive)
+                visitor = visitor_collection.find_one({"username": {"$regex": f"^{visitor_name}$", "$options": "i"}})
 
-        elif 'confirm_checkout' in request.form:
-            visitor_id = request.form.get('visitor_id')
+                if not visitor:
+                    return jsonify({"status": "error", "message": "Visitor not found"}), 404
 
-            try:
-                visitor = visitor_collection.find_one({"_id": ObjectId(visitor_id)})
+                # Move visitor to checkout collection
+                visitor["checkout_time"] = datetime.now()
+                checkout_collection.insert_one(visitor)  # Insert into checkout collection
+                visitor_collection.delete_one({"_id": visitor["_id"]})  # Remove from active visitors
 
-                if visitor:
-                    visitor["checkout_time"] = datetime.now()
-                    checkout_collection.insert_one(visitor)  # Move data to checkout collection
-                    visitor_collection.delete_one({"_id": ObjectId(visitor_id)})  # Remove from active visitors
-                    flash("Visitor checked out successfully!", "success")
-                    return redirect(url_for('checkout'))
-                else:
-                    flash("Error checking out visitor!", "danger")
-            except Exception as e:
-                flash(f"Error: {str(e)}", "danger")
+                return jsonify({"status": "success", "message": "Checkout successful!"})
 
-    return render_template('checkout.html', visitor=visitor_details)
+            else:
+                # Handle form submission from HTML
+                if 'fetch' in request.form:
+                    visitor_name = request.form.get('visitor_name', '').strip()
 
+                    if not visitor_name:
+                        flash("Please enter a valid visitor name.", "warning")
+                        return redirect(url_for('checkout'))
+
+                    visitor_details = visitor_collection.find_one(
+                        {"username": {"$regex": f"^{visitor_name}$", "$options": "i"}}
+                    )
+
+                    if not visitor_details:
+                        flash("Visitor not found!", "danger")
+
+                elif 'confirm_checkout' in request.form:
+                    visitor_id = request.form.get('visitor_id')
+
+                    if not visitor_id:
+                        flash("Invalid visitor ID!", "danger")
+                        return redirect(url_for('checkout'))
+
+                    try:
+                        visitor = visitor_collection.find_one({"_id": ObjectId(visitor_id)})
+
+                        if visitor:
+                            visitor["checkout_time"] = datetime.now()
+                            checkout_collection.insert_one(visitor)
+                            visitor_collection.delete_one({"_id": ObjectId(visitor_id)})
+
+                            flash("Visitor checked out successfully!", "success")
+                            return redirect(url_for('checkout'))
+                        else:
+                            flash("Error checking out visitor!", "danger")
+                    except Exception as e:
+                        flash(f"Error: {str(e)}", "danger")
+
+                return render_template('checkout.html', visitor=visitor_details)
+
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"Server error: {str(e)}"}), 500
+
+    return render_template('checkout.html')
 
 #  Run Flask App
 if __name__ == "__main__":
