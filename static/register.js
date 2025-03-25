@@ -69,32 +69,32 @@
 
         
         // 🔹 Auto-fetch host phone number when host is selected
-        hostInput.addEventListener("change", () => {
-            const selectedHost = hostInput.value.trim();
+        // hostInput.addEventListener("change", () => {
+        //     const selectedHost = hostInput.value.trim();
 
-            if (selectedHost) {
-                fetch(`/get-host-phone?host=${encodeURIComponent(selectedHost)}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === "success") {
-                            hostPhoneInput.value = data.phone;
-                            hostPhoneError.classList.add("hidden");
-                        } else {
-                            hostPhoneInput.value = "";
-                            hostPhoneError.classList.remove("hidden");
-                            hostPhoneError.textContent = "Host phone number not found!";
-                        }
-                    })
-                    .catch(error => {
-                        console.error("Error fetching host phone:", error);
-                        hostPhoneError.classList.remove("hidden");
-                        hostPhoneError.textContent = "Error fetching host phone!";
-                    });
-            } else {
-                hostPhoneInput.value = "";
-                hostPhoneError.classList.add("hidden");
-            }
-        });
+        //     if (selectedHost) {
+        //         fetch(`/get-host-phone?host=${encodeURIComponent(selectedHost)}`)
+        //             .then(response => response.json())
+        //             .then(data => {
+        //                 if (data.status === "success") {
+        //                     hostPhoneInput.value = data.phone;
+        //                     hostPhoneError.classList.add("hidden");
+        //                 } else {
+        //                     hostPhoneInput.value = "";
+        //                     hostPhoneError.classList.remove("hidden");
+        //                     hostPhoneError.textContent = "Host phone number not found!";
+        //                 }
+        //             })
+        //             .catch(error => {
+        //                 console.error("Error fetching host phone:", error);
+        //                 hostPhoneError.classList.remove("hidden");
+        //                 hostPhoneError.textContent = "Error fetching host phone!";
+        //             });
+        //     } else {
+        //         hostPhoneInput.value = "";
+        //         hostPhoneError.classList.add("hidden");
+        //     }
+        // });
 
         //  Enable check-in button when form is valid
         checkinForm.addEventListener("input", validateForm);
@@ -130,32 +130,7 @@
                 vehicle_plate: vehicleCheckbox.checked ? vehiclePlateInput.value.trim() : "None",
                 captured_photo: capturedPhoto.src || null // Send captured photo if available
             };
-
-            fetch("/checkin", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    username: "John Doe",
-                    phone: "+123456789",
-                    host: "HostName",
-                    purpose: "Meeting",
-                }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === "success") {
-                    alert(data.message);  // Show success message
-                    location.reload();     //  Refresh the page
-                } else {
-                    alert("Error: " + data.message);
-                }
-            })
-            .catch(error => {
-                alert("An unexpected error occurred.");
-            });
-            
+ 
 
             //SEND DATA TO SERVER
             fetch("/checkin", {
@@ -181,13 +156,18 @@
         });
 
         function showThankYouModal() {
-            thankYouModal.classList.remove("hidden");
+            const thankYouModal = document.getElementById("thankYouModal");
+            if (thankYouModal) {
+                thankYouModal.classList.remove("hidden");
+            } else {
+                console.error("Modal element not found!");
+            }
         }
-
-        //  Close Thank You Modal
-        closeModal.addEventListener("click", () => {
-            thankYouModal.classList.add("hidden");
+        
+        document.getElementById("closeModal").addEventListener("click", () => {
+            document.getElementById("thankYouModal").classList.add("hidden");
         });
+        
 
         //  Camera functionality (Capture Photo)
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -223,3 +203,20 @@
         });
     });
 
+    document.addEventListener("DOMContentLoaded", function () {
+        const hostSelect = document.getElementById("host");
+    
+        // Fetch and populate host names
+        fetch("/get_hosts")
+            .then(response => response.json())
+            .then(hosts => {
+                hosts.forEach(hostName => {
+                    let option = document.createElement("option");
+                    option.value = hostName;
+                    option.textContent = hostName;
+                    hostSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error("Error fetching hosts:", error));
+    });
+    

@@ -51,6 +51,12 @@ def buttons():
 def prereg():
     return render_template("prereg.html")
 
+@app.route("/get_hosts")
+def get_hosts():
+    hosts = list(hosts_collection.find({"username": {"$exists": True, "$ne": ""}}, {"_id": 0, "username": 1}))
+    return jsonify([host["username"] for host in hosts])  # Now returns valid usernames
+
+
 
 # Route to fetch visitor details
 
@@ -279,7 +285,7 @@ def register_host():
         })
 
         flash("Registration successful! Please log in.", "success")
-        return redirect(url_for("host_login"))  # 🔹 Redirect to login page
+        return redirect(url_for("login"))  # 🔹 Redirect to login page
 
     return render_template("register.html")  # Show registration form
 
