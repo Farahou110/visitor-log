@@ -1,3 +1,5 @@
+#index.html
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,6 +10,15 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+   <!-- Flash Messages -->
+   {% with messages = get_flashed_messages(with_categories=True) %}
+   {% if messages %}
+       {% for category, message in messages %}
+       <div class="{{ category }} category flash-message">{{ message }}</div>
+       {% endfor %}
+   {% endif %}
+{% endwith %}
+
     <!-- Thank You Modal -->
     <div id="thankYouModal" class="modal hidden">
         <div class="modal-content">
@@ -16,14 +27,14 @@
             <button id="closeModal" class="btn">OK</button>
         </div>
     </div>
-
+  
     <header>
         <h1 class="title">Visitor Check-In</h1>
     </header>
 
     <main class="container">
         <section class="checkin-section">
-            <form id="checkin-form">
+            <form id="checkin-form" method="POST" action="{{ url_for('checkin') }}">
                 <!-- Personal Information -->
                 <fieldset class="input-group">
                     <legend>Personal Information</legend>
@@ -95,7 +106,21 @@
     <footer>
         <p>&copy; 2025 Visitor Management System. All Rights Reserved.</p>
     </footer>
-
-    <script src="{{ url_for('static', filename='register.js') }}"></script>
 </body>
+<script src="{{ url_for('static', filename='register.js') }}"></script>
+</body>
+<script>
+    window.addEventListener('DOMContentLoaded', function() {
+      // Flash message timeout (3 seconds)
+      setTimeout(function() {
+        const flashMessage = document.querySelector('.flash-message');
+        if (flashMessage) {
+          flashMessage.style.opacity = 0;  // Fade out the flash message
+          setTimeout(function() {
+            flashMessage.style.display = 'none';  // Hide the message after fade
+          }, 1000);  // Match the transition time
+        }
+      }, 3000);  // 3 seconds before fading out
+    });
+  </script>
 </html>

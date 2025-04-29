@@ -1,0 +1,41 @@
+<!-- templates/checkin_success.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Check-In Success</title>
+    <meta http-equiv="refresh" content="120;url={{ url_for('index') }}">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding-top: 50px;
+        }
+        .message {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 20px;
+            display: inline-block;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <ul>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+
+<body>
+    <div class="message">
+        <h2>Successfully Registered!</h2>
+        <p>You will be redirected to the home page in 2 minutes.</p>
+    </div>
+</body>
+</html>

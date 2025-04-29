@@ -4,221 +4,210 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visitor Dashboard</title>
-
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Font Awesome Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-
-    <!-- Custom Styles -->
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #494e54, #547f8d);
-            padding: 20px;
+        .sidebar {
+            height: 100vh;
+            background-color: #343a40;
+            padding-top: 20px;
         }
-        .container {
-            max-width: 1100px;
-            background: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-            font-size: 24px;
-            margin-bottom: 20px;
-        }
-        .table {
-            background: #fff;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        thead {
-            background-color: #007bff;
+        .sidebar a {
             color: white;
+            padding: 12px 25px;
+            display: block;
+            text-decoration: none;
+            transition: all 0.3s;
         }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        tbody tr {
-            transition: background 0.2s ease-in-out;
-        }
-        tbody tr:hover {
-            background: rgba(0, 123, 255, 0.1);
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #007bff;
+            transform: translateX(5px);
         }
         .status {
             font-weight: bold;
-            padding: 6px 12px;
-            border-radius: 5px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
         }
-        .status-pending {
-            background-color: orange;
-            color: white;
+        .status-pending { background-color: #ffc107; color: #000; }
+        .status-approved { background-color: #28a745; color: white; }
+        .status-rejected, .status-declined { background-color: #dc3545; color: white; }
+        .status-exit { background-color: #6c757d; color: white; }
+        .table-responsive {
+            max-height: 75vh;
+            overflow-y: auto;
         }
-        .status-approved {
-            background-color: green;
-            color: white;
-        }
-        .status-declined {
-            background-color: red;
-            color: white;
-        }
-        .btn-action {
-            border: none;
-            padding: 8px 12px;
-            border-radius: 5px;
-            transition: all 0.3s ease;
-            font-size: 14px;
-            color: white;
-            cursor: pointer;
+        .action-buttons .btn {
             margin: 2px;
-        }
-        .btn-approve {
-            background-color: #28a745;
-        }
-        .btn-decline {
-            background-color: #dc3545;
-        }
-        .btn-approve:hover {
-            background-color: #218838;
-            transform: scale(1.05);
-        }
-        .btn-decline:hover {
-            background-color: #c82333;
-            transform: scale(1.05);
-        }
-        .btn-action:focus {
-            outline: none;
-            box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
-        }
-        .loading-spinner {
-            display: none;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #007BFF;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
+            min-width: 80px;
         }
     </style>
-
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-
-    <div class="container">
-        <h1>Visitor Dashboard</h1>
-        
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Host</th>
-                    <th>Purpose</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for visitor in visitors %}
-                <tr id="row-{{ visitor.id }}">
-                    <td>{{ visitor.id }}</td>
-                    <td>{{ visitor.username }}</td>
-                    <td>{{ visitor.host }}</td>
-                    <td>{{ visitor.purpose }}</td>
-                    <td>
-                        <span id="status-{{ visitor.id }}" class="{{ visitor.status | lower }} status status-{{ visitor.status }}">
-                            {{ visitor.status or 'Pending' }}
-                        </span>
-                    </td>
-                    <td>
-                        <button class="btn-action btn-approve" onclick="updateStatus('{{ visitor.id }}', 'Approved', '{{ visitor.host_phone }}')">
-                            <i class="fa-check fas"></i> Approve
-                        </button>
-                        <button class="btn-action btn-decline" onclick="updateStatus('{{ visitor.id }}', 'Declined', '{{ visitor.host_phone }}')">
-                            <i class="fa-times fas"></i> Decline
-                        </button>
-                        <div class="loading-spinner" id="spinner-{{ visitor.id }}"></div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Toast Notification -->
-    <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="toast-header">
-            <strong class="me-auto">Notification</strong>
-            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+   <!-- Flash Messages -->
+   {% with messages = get_flashed_messages(with_categories=True) %}
+   {% if messages %}
+       {% for category, message in messages %}
+       <div class="alert alert-{{ category }} alert-dismissible fade show m-2">
+           {{ message }}
+           <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+       </div>
+       {% endfor %}
+   {% endif %}
+   {% endwith %}  
+    
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-2 sidebar">
+            <h4 class="text-white p-3">Filter By</h4>
+            <a href="{{ url_for('dashboard', status='pending') }}" 
+               class="nav-link {{ 'active' if status_filter == 'pending' else '' }}">
+               <i class="fas fa-clock me-2"></i> Pending
+            </a>
+            <a href="{{ url_for('dashboard', status='approved') }}" 
+               class="nav-link {{ 'active' if status_filter == 'approved' else '' }}">
+               <i class="fas fa-check-circle me-2"></i> Approved
+            </a>
+            <a href="{{ url_for('dashboard', status='rejected') }}" 
+               class="nav-link {{ 'active' if status_filter == 'rejected' else '' }}">
+               <i class="fas fa-times-circle me-2"></i> Rejected
+            </a>
+            <a href="{{ url_for('dashboard', status='exit') }}" 
+               class="nav-link {{ 'active' if status_filter == 'exit' else '' }}">
+               <i class="fas fa-sign-out-alt me-2"></i> Checked Out
+            </a>
+            <div class="mt-auto p-3 text-center">
+                
+                    <i class="fas fa-sign-out-alt me-1"></i> Logout
+                </a>
+            </div>
         </div>
-        <div class="toast-body" id="toast-message"></div>
+
+        <!-- Content -->
+        <div class="col-md-10 content p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">Visitor Dashboard</h2>
+                <span class="badge bg-primary">
+                    Showing: {{ status_filter|capitalize }} ({{ visitors|length }})
+                </span>
+            </div>
+
+            {% if visitors %}
+            <div class="table-responsive rounded shadow-sm">
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark sticky-top">
+                        <tr>
+                            <th>Name</th>
+                            <th>Contact</th>
+                            <th>Purpose</th>
+                            <th>Host</th>
+                            <th>Check-In</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for visitor in visitors %}
+                        <tr class="{{ 'table-warning' if visitor.status|lower == 'pending' else 
+                                      'table-success' if visitor.status|lower == 'approved' else 
+                                      'table-danger' if visitor.status|lower in ['rejected', 'declined'] else 
+                                      'table-secondary' }}">
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if visitor.photo_url %}
+                                    <img src="{{ visitor.photo_url }}" alt="Photo" width="40" height="40" class="rounded-circle me-2">
+                                    {% else %}
+                                    <div class="rounded-circle bg-light text-center me-2" style="width: 40px; height: 40px; line-height: 40px;">
+                                        <i class="fas fa-user text-muted"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <strong>{{ visitor.username }}</strong>
+                                        
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <div><i class="fas fa-envelope me-1"></i> {{ visitor.email }}</div>
+                                    <div><i class="fas fa-phone me-1"></i> {{ visitor.phone }}</div>
+                                </div>
+                            </td>
+                            <td>{{ visitor.purpose }}</td>
+                            <td>{{ visitor.host }}</td>
+                            <td>{{ visitor.checkin_time_display }}</td>
+                            <td>
+                                <span class="status status-{{ visitor.status | lower }}">
+                                    <i class="fas fa-{{ 'clock' if visitor.status|lower == 'pending' else 
+                                                       'check' if visitor.status|lower == 'approved' else 
+                                                       'times' if visitor.status|lower in ['rejected', 'declined'] else 
+                                                       'sign-out-alt' }} me-1"></i>
+                                    {{ visitor.status }}
+                                </span>
+                            </td>
+                            <td class="text-end action-buttons">
+                                {% if visitor.status | lower == 'pending' %}
+                                <form method="POST" class="d-inline">
+                                    <input type="hidden" name="visitor_id" value="{{ visitor._id }}">
+                                    <button type="submit" name="action" value="approve" 
+                                            class="btn btn-success btn-sm">
+                                        <i class="fas fa-check"></i> Approved
+                                    </button>
+                                    <button type="submit" name="action" value="rejecte" 
+                                            class="btn btn-danger btn-sm">
+                                        <i class="fas fa-times"></i> Rejected
+                                    </button>
+                                </form>
+                                {% elif visitor.status | lower == 'approved' %}
+                                <form method="POST" class="d-inline">
+                                    <input type="hidden" name="visitor_id" value="{{ visitor._id }}">
+                                    <button type="submit" name="action" value="checkout" 
+                                            class="btn btn-secondary btn-sm">
+                                        <i class="fas fa-sign-out-alt"></i> Check Out
+                                    </button>
+                                </form>
+                               
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No {{ status_filter }} visitors found.
+            </div>
+            {% endif %}
+        </div>
     </div>
+</div>
 
-    <script>
-        function updateStatus(visitorId, status, hostPhone) {
-            const spinner = document.getElementById("spinner-" + visitorId);
-            const toast = new bootstrap.Toast(document.getElementById("toast"));
-            const toastMessage = document.getElementById("toast-message");
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Auto-dismiss flash messages after 5 seconds
+    setTimeout(function() {
+        $('.alert').fadeOut('slow');
+    }, 5000);
 
-            // Show loading spinner
-            spinner.style.display = "inline-block";
-
-            $.ajax({
-                url: "/approve_visitor",
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify({ id: visitorId, status: status, host_phone: hostPhone }),
-                success: function (response) {
-                    if (response.success) {
-                        toastMessage.textContent = response.message;
-                        toast.show();
-
-                        // Update status text
-                        let statusCell = document.getElementById("status-" + visitorId);
-                        if (statusCell) {
-                            statusCell.innerText = status;
-                            statusCell.className = "status status-" + status.toLowerCase();
-                        }
-
-                        // Remove row from table after approval/decline
-                        let row = document.getElementById("row-" + visitorId);
-                        if (row) {
-                            setTimeout(() => row.remove(), 500); // Delay for smoother UX
-                        }
-                    } else {
-                        toastMessage.textContent = "Error: " + response.message;
-                        toast.show();
-                    }
-                },
-                error: function () {
-                    toastMessage.textContent = "Error updating visitor status.";
-                    toast.show();
-                },
-                complete: function () {
-                    spinner.style.display = "none"; // Hide loading spinner
-                }
-            });
+    // Confirm before reject/decline
+    $('button[value="reject"]').click(function(e) {
+        if (!confirm('Are you sure you want to reject this visitor?')) {
+            e.preventDefault();
         }
-    </script>
+    });
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    // Confirm before checkout
+    $('button[value="checkout"]').click(function(e) {
+        if (!confirm('Check out this visitor?')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
 </body>
 </html>
