@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -218,3 +219,91 @@
 
 </body>
 </html>
+=======
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visitor Checkout</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 50px;
+        }
+        .checkout-container {
+            max-width: 400px;
+            background: white;
+            padding: 30px;
+            margin: auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .btn-secondary {
+            background-color: #28a745;
+        }
+        .btn-secondary:hover {
+            background-color: #218838;
+        }
+        .visitor-details {
+            text-align: left;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="checkout-container">
+        <h1>Visitor Checkout</h1>
+
+        <!-- Fetch Visitor Details Form -->
+        <form method="POST">
+            <input type="text" name="visitor_name" placeholder="Enter Visitor Name" required>
+            <button type="submit" name="fetch" class="btn">Fetch Details</button>
+        </form>
+
+        {% if visitor %}
+        <div class="visitor-details">
+            <h2>Visitor Details</h2>
+            <p><strong>Name:</strong> {{ visitor.name }}</p>
+            <p><strong>Email:</strong> {{ visitor.email }}</p>
+            <p><strong>Phone:</strong> {{ visitor.phone }}</p>
+            <p><strong>Check-in Time:</strong> {{ visitor.checkin_time }}</p>
+
+            <!-- Confirm Checkout Form -->
+            <form method="POST">
+                <input type="hidden" name="visitor_id" value="{{ visitor._id }}">
+                <button type="submit" name="confirm_checkout" class="btn btn-secondary">Check Out</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+</body>
+</html>
+>>>>>>> 09336c059f95f67ee1feb3ec125672189c0ad404
