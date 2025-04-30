@@ -48,16 +48,16 @@ def buttons():
 def index():
     return render_template("index.html")
 
-# Pre-register visitor
-@app.route("/prereg", methods=["GET"])
-def prereg():
-    return render_template("prereg.html")
 
 @app.route("/get_hosts")
 def get_hosts():
     hosts = list(hosts_collection.find({"username": {"$exists": True, "$ne": ""}}, {"_id": 0, "username": 1}))
     return jsonify([host["username"] for host in hosts])  # Now returns valid usernames
 
+# Pre-register visitor
+@app.route("/prereg", methods=["GET"])
+def prereg():
+    return render_template("prereg.html")
 
 # Route to fetch visitor details
 @app.route("/check-visitor", methods=["GET"])
@@ -68,16 +68,15 @@ def check_visitor():
         if not username:
             return jsonify({"status": "error", "message": "Username is required"}), 400
 
-        # Debugging log: Print received username
-        print(f"Searching for username: {username}")
+            # Fetch visitor details
+        query = {"username": {"$regex": f"^{re.escape(username)}$", "$options": "i"}}
 
-        # Fetch visitor details
-        visitor = visitor_collection.find_one(
-            {"username": {"$regex": f"^{re.escape(username)}$", "$options": "i"}}
-        )
+        visitor = declined_collection.find_one(query)
+        if not visitor:
+         visitor = approved_collection.find_one(query)
+        if not visitor:
+                  visitor = visitor_collection.find_one(query)
 
-        # Debugging log: Print retrieved visitor
-        print("Visitor found:", visitor)
 
         if not visitor:
             return jsonify({"status": "error", "message": "Visitor not found"}), 404
@@ -183,7 +182,7 @@ def verify_checkin():
         return jsonify({"status": "error", "message": "Invalid check-in code"}), 400
 
     except Exception as e:
-        print("Server error during check-in:", str(e))  # Logs error in console
+        # print("Server error during check-in:", str(e))  # Logs error in console
         return jsonify({"status": "error", "message": "Server error occurred"}), 500
 
 
@@ -207,7 +206,45 @@ def fetch_visitor():
 @app.route("/checkin", methods=["POST"])
 def checkin():
     try:
-        data = request.json 
+        # Check if it's a form submission (not AJAX)
+        if request.content_type != 'application/json':
+            visitor_name = request.form.get("username", "").strip()
+            visitor_email = request.form.get("email", "").strip()
+            visitor_phone = request.form.get("phone", "").strip()
+            purpose = request.form.get("purpose", "").strip()
+            host = request.form.get("host", "").strip()
+            
+            if not visitor_name or not visitor_email:
+                flash("Username and email are required.", "error")
+                return redirect(url_for("index"))
+                
+            if pre_registered_collection.find_one({"username": visitor_name}):
+                flash("Visitor already checked in.", "warning")
+                return redirect(url_for("index"))
+                
+            checkin_code = generate_checkin_code()
+            
+            visitor_collection.insert_one({
+                "username": visitor_name,
+                "email": visitor_email,
+                "phone": visitor_phone,
+                "purpose": purpose,
+                "host": host,
+                "status": "Pending",
+                "checkin_code": checkin_code,
+                "checkin_time": datetime.utcnow().isoformat()
+            })
+            
+            # Send email with checkin code
+            subject = "Your Visitor Check-In Code"
+            body = f"Hello {visitor_name},\n\nYour check-in code is: {checkin_code}\n\nUse this code to complete your check-in process."
+            msg = Message(subject=subject, recipients=[visitor_email], body=body)
+            mail.send(msg)
+            
+            return redirect(url_for("checkin_success"))
+        
+        # Handle AJAX request
+        data = request.json
         if not data:
             return jsonify({"status": "error", "message": "Invalid data"}), 400
 
@@ -223,6 +260,8 @@ def checkin():
 
         checkin_code = generate_checkin_code()
 
+
+
         visitor_collection.insert_one({
             **data,
             "status": "Pending",
@@ -235,13 +274,19 @@ def checkin():
         msg = Message(subject=subject, recipients=[visitor_email], body=body)
         mail.send(msg)
 
-        return redirect(url_for("checkin_success"))
-
+        return jsonify({
+            "status": "success", 
+            "message": "Check-in successful!",
+            "redirect_url": url_for("checkin_success")
+        })
 
     except Exception as e:
-        flash(f"Error: {str(e)}", "danger")
-        return redirect(url_for("checkin_success"))
-
+        if request.content_type != 'application/json':
+            flash(f"Error: {str(e)}", "danger")
+            return redirect(url_for("index"))
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+#succes page
 @app.route("/checkin_success", methods=["GET", "POST"])
 def checkin_success():
     return render_template("checkin_success.html")
@@ -383,6 +428,7 @@ def dashboard():
             flash(f"Error processing request: {str(e)}", "danger")
 
         return redirect(url_for("dashboard", status=status_filter))
+    
 
     # Get visitors based on status filter
     try:

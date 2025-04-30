@@ -158,3 +158,33 @@ footer {
         margin-bottom: 10px;
     }
 }
+
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0,0,0,.1);
+    border-radius: 50%;
+    border-top-color: #3498db;
+    animation: spin 1s ease-in-out infinite;
+    margin-left: 10px;
+    vertical-align: middle;
+}
+
+.refresh-btn {
+    background: none;
+    border: none;
+    color: #3498db;
+    cursor: pointer;
+    margin-left: 10px;
+    font-size: 1em;
+    padding: 0;
+}
+
+.refresh-btn:hover {
+    color: #2980b9;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
