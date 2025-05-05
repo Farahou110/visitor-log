@@ -109,10 +109,10 @@
                     </thead>
                     <tbody>
                         {% for visitor in visitors %}
-                        <tr class="{{ 'table-warning' if visitor.status|lower == 'pending' else 
-                                      'table-success' if visitor.status|lower == 'approved' else 
-                                      'table-danger' if visitor.status|lower in ['rejected', 'declined'] else 
-                                      'table-secondary' }}">
+                        <tr class="{{ 'table-warning' if status_filter == 'pending' else 
+                                      'table-success' if status_filter == 'approved' else 
+                                      'table-danger' if status_filter == 'rejected' else 
+                                      'table-secondary' if status_filter == 'exit' }}">
                             <td>
                                 <div class="d-flex align-items-center">
                                     {% if visitor.photo_url %}
@@ -138,16 +138,16 @@
                             <td>{{ visitor.host }}</td>
                             <td>{{ visitor.checkin_time_display }}</td>
                             <td>
-                                <span class="status status-{{ visitor.status | lower }}">
-                                    <i class="fas fa-{{ 'clock' if visitor.status|lower == 'pending' else 
-                                                       'check' if visitor.status|lower == 'approved' else 
-                                                       'times' if visitor.status|lower in ['rejected', 'declined'] else 
+                                <span class="status status-{{ status_filter }}">
+                                    <i class="fas fa-{{ 'clock' if status_filter == 'pending' else 
+                                                       'check' if status_filter == 'approved' else 
+                                                       'times' if status_filter == 'rejected' else 
                                                        'sign-out-alt' }} me-1"></i>
-                                    {{ visitor.status }}
+                                    {{ status_filter|capitalize }}
                                 </span>
                             </td>
                             <td class="text-end action-buttons">
-                                {% if visitor.status | lower == 'pending' %}
+                                {% if status_filter == 'pending' %}
                                 <form method="POST" class="d-inline">
                                     <input type="hidden" name="visitor_id" value="{{ visitor._id }}">
                                     <button type="submit" name="action" value="approve" 
@@ -159,7 +159,7 @@
                                         <i class="fas fa-times"></i> Reject
                                     </button>
                                 </form>
-                                {% elif visitor.status | lower == 'approved' %}
+                                {% elif status_filter == 'approved' %}
                                 <form method="POST" class="d-inline">
                                     <input type="hidden" name="visitor_id" value="{{ visitor._id }}">
                                     <button type="submit" name="action" value="checkout" 
@@ -195,16 +195,23 @@ $(document).ready(function() {
         $('.alert').fadeOut('slow');
     }, 5000);
 
-    // Confirm before reject/decline
+    // Confirm before reject
     $('button[value="reject"]').click(function(e) {
         if (!confirm('Are you sure you want to reject this visitor?')) {
             e.preventDefault();
         }
     });
 
+    // Confirm before approve
+    $('button[value="approve"]').click(function(e) {
+        if (!confirm('Are you sure you want to approve this visitor?')) {
+            e.preventDefault();
+        }
+    });
+
     // Confirm before checkout
     $('button[value="checkout"]').click(function(e) {
-        if (!confirm('Check out this visitor?')) {
+        if (!confirm('Are you sure you want to check out this visitor?')) {
             e.preventDefault();
         }
     });
