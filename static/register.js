@@ -1,141 +1,211 @@
 <<<<<<< HEAD
 document.addEventListener("DOMContentLoaded", function () {
-    //  Form & Input Elements
+    // Form & Input Elements
     const vehicleCheckbox = document.getElementById("vehicle-checkbox");
     const vehicleInput = document.getElementById("vehicle-input");
-
     const checkinForm = document.getElementById("checkin-form");
     const checkinButton = document.getElementById("checkin-btn");
-
     const video = document.getElementById("video");
     const captureButton = document.getElementById("capture-btn");
     const capturedPhoto = document.getElementById("captured-photo");
     const photoContainer = document.getElementById("photo-container");
     const canvas = document.createElement("canvas");
-
     const thankYouModal = document.getElementById("thankYouModal");
     const closeModal = document.getElementById("closeModal");
+    const hostInput = document.getElementById("host");
+    const hostLoading = document.createElement('span');
+    hostLoading.className = 'loading-spinner';
+    hostInput.parentNode.appendChild(hostLoading);
 
-    //  Form Fields
+    // Form Fields
     const usernameInput = document.getElementById("username");
     const phoneInput = document.getElementById("phone");
     const idInput = document.getElementById("id");
     const emailInput = document.getElementById("email");
     const purposeInput = document.getElementById("purpose");
-    const hostInput = document.getElementById("host");
     const vehiclePlateInput = document.getElementById("vehicle-plate");
+
+    // Initialize form state
+    let hostsLoaded = false;
+    let cameraInitialized = false;
 
     // Toggle vehicle input field
     vehicleCheckbox.addEventListener("change", () => {
         vehicleInput.classList.toggle("hidden", !vehicleCheckbox.checked);
+        validateForm();
     });
 
-    // ID Number Validation (only digits, max 9)
+    // Input validations
     idInput.addEventListener("input", () => {
         idInput.value = idInput.value.replace(/\D/g, "").slice(0, 9);
+        validateForm();
     });
 
-    // Email Validation
     emailInput.addEventListener("input", () => {
-        emailInput.setCustomValidity(emailInput.value.includes("@") ? "" : "Email must contain @");
+        const isValid = emailInput.value.includes("@") && emailInput.value.includes(".");
+        emailInput.setCustomValidity(isValid ? "" : "Please enter a valid email");
+        validateForm();
     });
 
     // Set today's date as minimum for check-in
     const today = new Date().toISOString().split("T")[0];
     document.getElementById("checkin-date").setAttribute("min", today);
 
-    // Enable check-in button when form is valid
+    // Enhanced form validation
     function validateForm() {
-        const isValid =
+        const isFormValid = 
             usernameInput.value.trim() !== "" &&
             idInput.value.trim() !== "" &&
-            emailInput.value.includes("@") &&
+            emailInput.checkValidity() &&
             phoneInput.value.trim() !== "" &&
             purposeInput.value.trim() !== "" &&
-            hostInput.value.trim() !== "";
+            hostInput.value !== "" &&
+            hostsLoaded;
 
-        checkinButton.disabled = !isValid;
-        checkinButton.classList.toggle("disabled", !isValid);
+        checkinButton.disabled = !isFormValid;
+        checkinButton.classList.toggle("disabled", !isFormValid);
+        return isFormValid;
     }
 
+    // Add event listeners for validation
     document.querySelectorAll("#checkin-form input, #checkin-form select, #checkin-form textarea")
         .forEach(input => input.addEventListener("input", validateForm));
 
-    // Fetch and populate host names
-    fetch("/get_hosts")
-        .then(response => response.json())
-        .then(hosts => {
-            hosts.forEach(hostName => {
-                const option = document.createElement("option");
-                option.value = hostName;
-                option.textContent = hostName;
-                hostInput.appendChild(option);
+    // Fetch and populate host names with error handling
+    function loadHosts() {
+        hostLoading.classList.remove('hidden');
+        hostInput.disabled = true;
+        hostInput.innerHTML = '<option value="" disabled selected>Loading hosts...</option>';
+
+        fetch("/get_hosts")
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(hosts => {
+                if (!Array.isArray(hosts) || hosts.length === 0) {
+                    throw new Error('No hosts available');
+                }
+
+                hostInput.innerHTML = '<option value="" disabled selected>Select your host</option>';
+                hosts.forEach(hostName => {
+                    const option = new Option(hostName, hostName);
+                    hostInput.add(option);
+                });
+
+                hostsLoaded = true;
+                validateForm();
+            })
+            .catch(error => {
+                console.error("Error loading hosts:", error);
+                hostInput.innerHTML = '<option value="" disabled selected>Error loading hosts</option>';
+                alert("Could not load host list. Please try again later.");
+            })
+            .finally(() => {
+                hostLoading.classList.add('hidden');
+                hostInput.disabled = false;
             });
-        })
-        .catch(error => console.error("Error fetching hosts:", error));
+    }
 
-    // Handle Check-in Form Submission (JSON)
-    checkinForm.addEventListener("submit", event => {
+
+    // Handle form submission with better error handling
+    checkinForm.addEventListener("submit", async (event) => {
         event.preventDefault();
+        
+        if (!validateForm()) {
+            alert("Please fill all required fields correctly");
+            return;
+        }
 
-        const formData = {
-            username: usernameInput.value.trim(),
-            id: idInput.value.trim(),
-            email: emailInput.value.trim(),
-            phone: phoneInput.value.trim(),
-            purpose: purposeInput.value.trim(),
-            host: hostInput.value.trim(),
-            vehicle_plate: vehicleCheckbox.checked ? vehiclePlateInput.value.trim() : "None",
-            captured_photo: capturedPhoto.src || null
-        };
+        checkinButton.disabled = true;
+        checkinButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
-        fetch("/checkin", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(formData)
-        })
-        .then(response => response.json())
-        .then(data => {
+        try {
+            const formData = {
+                username: usernameInput.value.trim(),
+                id: idInput.value.trim(),
+                email: emailInput.value.trim(),
+                phone: phoneInput.value.trim(),
+                purpose: purposeInput.value.trim(),
+                host: hostInput.value.trim(),
+                vehicle_plate: vehicleCheckbox.checked ? vehiclePlateInput.value.trim() : "None",
+                captured_photo: capturedPhoto.src || null
+            };
+
+            const response = await fetch("/checkin", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Server error occurred');
+            }
+
             if (data.status === "success") {
                 showThankYouModal();
-                checkinForm.reset();
-                checkinButton.disabled = true;
-                checkinButton.classList.add("disabled");
-                photoContainer.classList.add("hidden");
-                capturedPhoto.src = "";
+                resetForm();
             } else {
-                alert("Error: " + data.message);
+                throw new Error(data.message || 'Check-in failed');
             }
-        })
-        .catch(error => {
-            console.error("Error:", error);
-            alert("An error occurred while checking in.");
-        });
+        } catch (error) {
+            console.error("Submission error:", error);
+            alert(`Error: ${error.message}`);
+        } finally {
+            checkinButton.disabled = false;
+            checkinButton.innerHTML = '<i class="fas fa-check-circle"></i> CHECK IN';
+        }
     });
 
-    // Camera functionality (Capture Photo)
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    // Camera initialization with user feedback
+    function initializeCamera() {
+        if (cameraInitialized) return;
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            console.error("Camera API not supported");
+            captureButton.disabled = true;
+            captureButton.title = "Camera not supported in your browser";
+            return;
+        }
+
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(stream => {
                 video.srcObject = stream;
                 video.play();
+                cameraInitialized = true;
             })
-            .catch(error => console.error("Error accessing camera:", error));
+            .catch(error => {
+                console.error("Camera access error:", error);
+                captureButton.disabled = true;
+                captureButton.title = "Camera access denied";
+            });
     }
 
+    // Initialize camera when user interacts with the form
+    document.querySelectorAll('#checkin-form input, #checkin-form select, #checkin-form textarea')
+        .forEach(el => el.addEventListener('focus', initializeCamera));
+
+    // Capture photo functionality
     captureButton.addEventListener("click", () => {
+        if (!cameraInitialized) {
+            alert("Camera not ready. Please allow camera access first.");
+            return;
+        }
+
         const context = canvas.getContext("2d");
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        const imageData = canvas.toDataURL("image/png");
-        capturedPhoto.src = imageData;
+        capturedPhoto.src = canvas.toDataURL("image/png");
         capturedPhoto.classList.remove("hidden");
         photoContainer.classList.remove("hidden");
+        validateForm();
     });
 
-    // Close Thank You Modal
+    // Modal control
     closeModal.addEventListener("click", () => {
         thankYouModal.classList.add("hidden");
     });
@@ -147,7 +217,18 @@ document.addEventListener("DOMContentLoaded", function () {
             console.error("Modal element not found!");
         }
     }
+
+    function resetForm() {
+        checkinForm.reset();
+        checkinButton.disabled = true;
+        checkinButton.classList.add("disabled");
+        photoContainer.classList.add("hidden");
+        capturedPhoto.src = "";
+        vehicleInput.classList.add("hidden");
+        vehicleCheckbox.checked = false;
+    }
 });
+<<<<<<< HEAD
 =======
     document.addEventListener("DOMContentLoaded", function () {
         //  Form & Input Elements
@@ -375,3 +456,21 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 >>>>>>> 09336c059f95f67ee1feb3ec125672189c0ad404
+=======
+
+document.getElementById("verifyCheckinForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+  
+    const username = document.getElementById("verifyUsername").value;
+    const checkin_code = document.getElementById("verifyCode").value;
+  
+    const response = await fetch("/verify-checkin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, checkin_code })
+    });
+  
+    const result = await response.json();
+    alert(result.message);
+  });
+>>>>>>> local
