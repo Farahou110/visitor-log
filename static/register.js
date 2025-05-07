@@ -106,16 +106,6 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     }
 
-    // Initial load of hosts
-    loadHosts();
-
-    // Add refresh button for hosts
-    const refreshHostsBtn = document.createElement('button');
-    refreshHostsBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
-    refreshHostsBtn.className = 'refresh-btn';
-    refreshHostsBtn.title = 'Refresh hosts list';
-    refreshHostsBtn.addEventListener('click', loadHosts);
-    hostInput.parentNode.appendChild(refreshHostsBtn);
 
     // Handle form submission with better error handling
     checkinForm.addEventListener("submit", async (event) => {
